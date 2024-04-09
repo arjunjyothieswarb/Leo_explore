@@ -64,6 +64,11 @@ class Frontier_Exp():
         print(np.shape(candidates))
         print(width * height)
 
+        labels, centroid = self.get_cluster(candidates)
+
+        print(labels)
+        print(centroid)
+
     def get_cluster(self, point_dataset):
         for i in range(3):
             kmeans = KMeans(init='k-means++', n_clusters=self.cluster_number)
