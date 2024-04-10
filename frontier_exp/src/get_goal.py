@@ -5,6 +5,7 @@ import rosbag
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
+from sklearn.cluster import KMeans
 
 
 
@@ -19,6 +20,7 @@ class Frontier_Exp():
         self.neighbourhood = 5
         self.n = np.int8((self.neighbourhood - 1)/2)
         self.candidate_match = 13
+        self.cluster_number = 8
         # goal_gen = rospy.Service()
         # print("Frontier service armed!")
         # rospy.spin()
@@ -61,6 +63,18 @@ class Frontier_Exp():
         
         print(np.shape(candidates))
         print(width * height)
+
+        labels, centroid = self.get_cluster(candidates)
+
+        print(labels)
+        print(len(labels))
+        print(centroid)
+
+    def get_cluster(self, point_dataset):
+        for i in range(11):
+            kmeans = KMeans(init='k-means++', n_clusters=self.cluster_number)
+            kmeans.fit(point_dataset)
+        return kmeans.labels_, kmeans.cluster_centers_
 
     def is_candidate(self, ker):
 
