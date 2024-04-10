@@ -8,7 +8,6 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 
-
 class Frontier_Exp():
 
     def __init__(self) -> None:
