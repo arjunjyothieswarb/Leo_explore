@@ -43,6 +43,7 @@ class Frontier_Exp():
         width = self.map.info.width
         height = self.map.info.height
         print(self.map.info.origin)
+        print(self.map.info.resolution)
 
         map_data = np.empty((height, width), dtype=np.int8)
         candidates = []
