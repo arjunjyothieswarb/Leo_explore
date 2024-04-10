@@ -2,7 +2,7 @@
 
 import rospy
 import rosbag
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
 from sklearn.cluster import KMeans
@@ -43,6 +43,7 @@ class Frontier_Exp():
         # Getting the meta data from the map
         width = self.map.info.width
         height = self.map.info.height
+        print(self.map.info.origin)
 
         map_data = np.empty((height, width), dtype=np.int8)
         candidates = []
