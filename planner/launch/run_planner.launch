@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+
+  <node pkg="planner" type="dummy_frontier_server.py" name="dummy_frontier_server"/>
+  <node pkg="planner" type="local_planner.py" name="local_planner"/>
+  <node pkg="planner" type="global_planner.py" name="global_planner"/>
+
+</launch>
