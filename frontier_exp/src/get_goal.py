@@ -3,7 +3,9 @@
 import rospy
 import rosbag
 from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Point32
 from nav_msgs.msg import OccupancyGrid
+from sensor_msgs.msg import PointCloud
 import numpy as np
 from sklearn.cluster import KMeans
 
@@ -56,20 +58,27 @@ class Frontier_Exp():
             end_index = base_index + width
             map_data[i] = np.array(self.map.data[base_index:end_index])
         
+        map_data[map_data > 0] = (self.neighbourhood**2) + 5
+
         # Getting cadidates
         for i in range(self.n, height - self.n - 1):
             for j in range(self.n, width - self.n - 1):
-                if self.is_candidate(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]):
+                # if self.is_candidate(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]):
+                if np.sum(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]) == -self.candidate_match:
                     candidates.append([i,j])
         
         print(np.shape(candidates))
         print(width * height)
 
         labels, centroid = self.get_cluster(candidates)
+        # Centroid_pts
 
-        print(labels)
+        # print(labels)
         print(len(labels))
-        print(centroid)
+        # print(centroid)
+        # for point in candidates:
+            
+        #     pass
 
     def get_cluster(self, point_dataset):
         for i in range(11):
