@@ -1,0 +1,3 @@
+bool reached_goal
+---
+nav_msgs/Path path
