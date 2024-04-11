@@ -1,0 +1,3 @@
+bool need_frontier
+---
+geometry_msgs/PoseStamped goal
