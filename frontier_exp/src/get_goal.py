@@ -2,11 +2,12 @@
 
 import rospy
 import rosbag
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Point32
 from nav_msgs.msg import OccupancyGrid
+from sensor_msgs.msg import PointCloud
 import numpy as np
 from sklearn.cluster import KMeans
-
 
 
 class Frontier_Exp():
@@ -43,11 +44,11 @@ class Frontier_Exp():
         # Getting the meta data from the map
         width = self.map.info.width
         height = self.map.info.height
+        print(self.map.info.origin)
+        print(self.map.info.resolution)
 
         map_data = np.empty((height, width), dtype=np.int8)
         candidates = []
-
-        # print("width * height: ", width * height)
 
         # Converting 1D array into 2D
         for i in range(height):
@@ -55,20 +56,26 @@ class Frontier_Exp():
             end_index = base_index + width
             map_data[i] = np.array(self.map.data[base_index:end_index])
         
+        map_data[map_data > 0] = (self.neighbourhood**2) + 5
+
         # Getting cadidates
         for i in range(self.n, height - self.n - 1):
             for j in range(self.n, width - self.n - 1):
-                if self.is_candidate(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]):
+                # if self.is_candidate(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]):
+                if np.sum(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]) == -self.candidate_match:
                     candidates.append([i,j])
         
         print(np.shape(candidates))
-        print(width * height)
 
         labels, centroid = self.get_cluster(candidates)
+        # Centroid_pts
 
-        print(labels)
-        print(len(labels))
-        print(centroid)
+        # print(labels)
+        # print(len(labels))
+        # print(centroid)
+        # for point in candidates:
+            
+        #     pass
 
     def get_cluster(self, point_dataset):
         for i in range(11):
@@ -76,27 +83,27 @@ class Frontier_Exp():
             kmeans.fit(point_dataset)
         return kmeans.labels_, kmeans.cluster_centers_
 
-    def is_candidate(self, ker):
+    # def is_candidate(self, ker):
 
-        # This function checks the eligibility of the neighbourhood to be a candidate
-        # If it encounters an occupied cell, it returns False
-        # If the number of unexplored points are less, it returns False
+    #     # This function checks the eligibility of the neighbourhood to be a candidate
+    #     # If it encounters an occupied cell, it returns False
+    #     # If the number of unexplored points are less, it returns False
 
-        # Counter for number of unexplored cells
-        counter = 0
+    #     # Counter for number of unexplored cells
+    #     counter = 0
 
-        # Convolution... sort of
-        for i in range(self.neighbourhood):
-            for j in range(self.neighbourhood):
-                if ker[i,j] == 1:
-                    return False
-                elif ker[i,j] == 0:
-                    counter = counter + 1
+    #     # Convolution... sort of
+    #     for i in range(self.neighbourhood):
+    #         for j in range(self.neighbourhood):
+    #             if ker[i,j] == 1:
+    #                 return False
+    #             elif ker[i,j] == 0:
+    #                 counter = counter + 1
 
-        if counter == self.candidate_match:
-            return True
-        else:
-            return False
+    #     if counter == self.candidate_match:
+    #         return True
+    #     else:
+    #         return False
 
 if __name__ == '__main__':
     Frontier_Exp()
