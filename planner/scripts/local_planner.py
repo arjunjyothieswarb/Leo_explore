@@ -57,7 +57,7 @@ class MPPI:
         """ Your implementation here """
         self.motion_model = motion_model
 
-        self.N = 10
+        self.N = 40
         self.lambda_ = 0.01
         # Each iteration updates state with control input for dt
         self.dt =0.02
@@ -118,7 +118,7 @@ class MPPI:
         action+=del_num
 
 
-        self.prev_control = action
+        self.prev_control = np.clip(action, a_min=self.action_min, a_max=self.action_max)
         print(action)
 
         return np.clip(action, a_min=self.action_min, a_max=self.action_max)
