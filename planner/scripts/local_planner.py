@@ -6,12 +6,12 @@ from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry, Path
 import tf2_ros
 import numpy as np
-# from mppi import MPPI
+# from planner.scripts.mppi import MPPI
 from planner.srv import global_path, global_pathResponse
 
 class Unicycle():
 
-    def __init__(self, v_min=0, v_max=0.2, w_min=-0.5, w_max=0.5):
+    def __init__(self, v_min=0, v_max=0.2, w_min=-np.pi, w_max=np.pi):
         self.v_min= v_min
         self.v_max = v_max
         self.w_min = w_min

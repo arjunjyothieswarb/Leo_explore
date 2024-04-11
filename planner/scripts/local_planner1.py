@@ -6,12 +6,11 @@ from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry, Path
 import tf2_ros
 import numpy as np
-# from mppi import MPPI
 from planner.srv import global_path, global_pathResponse
 
 class Unicycle():
 
-    def __init__(self, v_min=0, v_max=0.2, w_min=-0.5, w_max=0.5):
+    def __init__(self, v_min=-0.2, v_max=0.2, w_min=-0.5, w_max=0.5):
         self.v_min= v_min
         self.v_max = v_max
         self.w_min = w_min
@@ -141,24 +140,6 @@ class MPPI:
       NxTplus1_states = np.array(NxTplus1_states)
       return NxTplus1_states
 
-    # def plot_rollouts(self, initial_state: np.ndarray, goal_pos: np.ndarray, NxTplus1_states):
-    #   # Plotting each rollout
-    #   N, T_plus_1, _ = NxTplus1_states.shape
-    #   for i in range(N):
-    #       rollout = NxTplus1_states[i]
-    #       x_positions = rollout[:, 0]
-    #       y_positions = rollout[:, 1]
-    #       plt.plot(x_positions, y_positions, marker='o', label=f'Rollout {i+1}', alpha = 0.3)
-    #   plt.scatter(initial_state[0], initial_state[1], color='green', marker='o', label='Initial State')
-    #   plt.scatter(goal_pos[0], goal_pos[1], color='red', marker='x', label='Goal Position')
-    #   # Adding labels and legend
-    #   plt.title('Position of Robot in Each Rollout')
-    #   plt.xlabel('X Position')
-    #   plt.ylabel('Y Position')
-    #   plt.axis('equal')
-    #   plt.grid(True)
-    #   plt.show()
-
     def calculate_distance(self,point1, point2):
         x1, y1 = point1
         x2, y2 = point2
@@ -255,8 +236,8 @@ class MPPI:
           updated_u_dash[t][1] = updated_u_dash[t][1] + dw
 
         # checking the control limits
-        updated_u_dash[:,0] = np.clip(updated_u_dash[:,0], -1, 1)
-        updated_u_dash[:,1] = np.clip(updated_u_dash[:,1], -2*np.pi, 2*np.pi)
+        updated_u_dash[:,0] = np.clip(updated_u_dash[:,0], 0, 0.2)
+        updated_u_dash[:,1] = np.clip(updated_u_dash[:,1], -np.pi, np.pi)
 
         # 4.3 Plot the updated trajectory
         # passing through simulatior or kinematics model
@@ -355,7 +336,7 @@ class WayptTracker():
         y = pose.pose.position.y
         state = np.array([x,y])
         distance = np.linalg.norm(initial_state[:2] - state)
-        threshold_distance=0.1
+        threshold_distance=0.02
 
         if distance < threshold_distance:
             # Update the waypoint to a new position
