@@ -9,6 +9,7 @@ from sensor_msgs.msg import PointCloud
 import numpy as np
 from sklearn.cluster import KMeans
 
+import time
 
 class Frontier_Exp():
 
@@ -47,6 +48,8 @@ class Frontier_Exp():
         print(self.map.info.origin)
         print(self.map.info.resolution)
 
+        start = time.process_time()
+
         map_data = np.empty((height, width), dtype=np.int8)
         candidates = []
 
@@ -65,6 +68,7 @@ class Frontier_Exp():
                 if np.sum(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]) == -self.candidate_match:
                     candidates.append([i,j])
         
+        print(time.process_time() - start)
         print(np.shape(candidates))
 
         labels, centroid = self.get_cluster(candidates)
