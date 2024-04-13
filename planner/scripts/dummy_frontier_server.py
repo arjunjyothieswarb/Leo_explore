@@ -9,6 +9,7 @@ def frontier_cb(request):
         pose.header.frame_id = 'map'
         pose.header.stamp = rospy.Time.now()
         pose.pose.position.x =5
+        pose.pose.position.y =5
         return frontier_goalResponse(pose)
     else:
         return None
