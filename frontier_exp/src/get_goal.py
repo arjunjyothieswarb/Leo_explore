@@ -45,8 +45,10 @@ class Frontier_Exp():
         # Getting the meta data from the map
         width = self.map.info.width
         height = self.map.info.height
+        res = self.map.info.resolution
         print(self.map.info.origin)
         print(self.map.info.resolution)
+        print(self.map.header.frame_id)
 
         start = time.process_time()
 
@@ -73,7 +75,20 @@ class Frontier_Exp():
 
         labels, centroid = self.get_cluster(candidates)
         # Centroid_pts
+        
 
+        while(not rospy.is_shutdown()):
+            val = np.random.randint(0,62)
+            # goal_point = centroid[val]
+            goal_point = candidates[val]
+            goal = PoseStamped()
+            goal.header.frame_id = "map"
+            goal.header.stamp = rospy.Time.now()
+            goal.pose.position.x = float(goal_point[1]*self.map.info.resolution + self.map.info.origin.position.x)
+            goal.pose.position.y = float(goal_point[0]*self.map.info.resolution + self.map.info.origin.position.y)
+            goal.pose.position.z = 0.0
+            self.goal_pub.publish(goal)
+            time.sleep(1)
         # print(labels)
         # print(len(labels))
         # print(centroid)
