@@ -12,6 +12,8 @@ import numpy as np
 from sklearn.cluster import KMeans
 import time
 
+
+
 class Frontier_Exp():
 
     def __init__(self) -> None:
@@ -36,11 +38,8 @@ class Frontier_Exp():
 
 
 
-
-
     def get_goal(self):
         
-        # Uncomment the below line for getting message directly from topic
         self.map = rospy.wait_for_message("/map", OccupancyGrid, timeout=10)
         rospy.loginfo("Received the map!")
 
@@ -70,13 +69,16 @@ class Frontier_Exp():
         labels, centroid = self.get_cluster(candidates)
         centroid = np.array(centroid)
 
+        # Scoring the centroids
         scores = self.get_scores(labels, centroid)
-        goal_pose = centroid[np.argmax(scores)]
+        the_chosen_one = np.argmax(scores)
+        rand_val = np.random.randint(0,np.shape(labels)[0] - 1)
+        while(labels[rand_val] != the_chosen_one):
+            rand_val = np.random.randint(0,np.shape(labels)[0] - 1)
+        goal_pose = candidates[rand_val]
 
         self.test_output(goal_pose)
         pass
-
-
 
 
 
@@ -84,8 +86,10 @@ class Frontier_Exp():
 
         res = self.map.info.resolution
         phi_1 = 300    # Score multiplier for dist
-        phi_2 = 0.7  # Score multiplier for mass    
-        
+        phi_2 = 0.7    # Score multiplier for mass    
+        scores = np.empty((np.shape(centroid)[0]))
+        score_accum = 0
+
         # Getting the TF between the map and the robot
         try:
             transform = self.tf_buffer.lookup_transform("map", "base_footprint", rospy.Time(0), rospy.Duration(5))
@@ -96,10 +100,6 @@ class Frontier_Exp():
         robot_index = np.empty((2))
         robot_index[1] = np.int8((transform.transform.translation.x + self.map.info.origin.position.x)/res)
         robot_index[0] = np.int8((transform.transform.translation.y + self.map.info.origin.position.y)/res)
-
-        # dist = np.empty((np.shape(centroid)[0]))
-        scores = np.empty((np.shape(centroid)[0]))
-        score_accum = 0
 
         for i in range((np.shape(centroid)[0])):
             dist = np.linalg.norm(centroid[i] - robot_index)
@@ -112,15 +112,11 @@ class Frontier_Exp():
 
 
 
-
-
     def get_cluster(self, point_dataset):
         for i in range(11):
             kmeans = KMeans(init='k-means++', n_clusters=self.cluster_number)
             kmeans.fit(point_dataset)
         return kmeans.labels_, kmeans.cluster_centers_
-
-
 
 
 
