@@ -2,6 +2,7 @@
 
 import rospy
 from nav_msgs.msg import OccupancyGrid
+from std_msgs.msg import Header
 
 import numpy as np
 
@@ -47,6 +48,8 @@ class Map_inflator():
             base_index = i*width
             end_index = base_index + width
             data.data[base_index:end_index] = list(map_data[i])
+
+        data.header.stamp = rospy.Time.now()
 
         # Publishing the inflated map
         self.map_pub(data)
