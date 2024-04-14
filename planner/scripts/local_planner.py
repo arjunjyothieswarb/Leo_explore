@@ -68,7 +68,7 @@ class ControlBot():
         while not rospy.is_shutdown():
             try:
                 # Get the latest transform from /map to /base_footprint
-                transform = self.tf_buffer.lookup_transform('map', 'base_footprint', rospy.Time(0), rospy.Duration(1.0))
+                transform = self.tf_buffer.lookup_transform('base_footprint','map',rospy.Time(0),rospy.Duration(10))
                 
                 # Callback to handle the transform
                 self.transform_callback(transform)
