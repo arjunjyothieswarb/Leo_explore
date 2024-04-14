@@ -11,11 +11,13 @@ class Map_inflator():
 
         rospy.init_node("Binary_inflator")
 
+        # Getting the kernel size
         self.kernel_size = rospy.get_param("/kernel_size",5)
         self.n = np.int8((self.kernel_size - 1)/2)
         
-        self.map_sub = rospy.Subscriber("\map", OccupancyGrid, self.inflate_map)
+        # Initializing the publisher and subscriber
         self.map_pub = rospy.Publisher("\Binary_cost_map", OccupancyGrid, queue_size=10)
+        self.map_sub = rospy.Subscriber("\map", OccupancyGrid, self.inflate_map)
 
         rospy.spin()
 
