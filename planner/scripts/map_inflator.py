@@ -53,3 +53,5 @@ class Map_inflator():
 
         # Publishing the inflated map
         self.map_pub(data)
+
+        
