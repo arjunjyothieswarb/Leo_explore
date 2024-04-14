@@ -69,7 +69,7 @@ class Frontier_Exp():
         labels, centroid = self.get_cluster(candidates)
         centroid = np.array(centroid)
 
-        # Scoring the centroids
+        # Scoring the centroids and selecting a random candidate from the chosen centroid
         scores = self.get_scores(labels, centroid)
         the_chosen_one = np.argmax(scores)
         rand_val = np.random.randint(0,np.shape(labels)[0] - 1)
