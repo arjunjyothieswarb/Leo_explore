@@ -378,7 +378,7 @@ class MPPI:
 
 
 class ControlBot():
-    def __init__(self,  amin=-0.2, amax=0.2, dt=0.1):
+    def __init__(self):
         # Initialize the ROS node
         rospy.init_node('local_planner', anonymous=True)
         cmd_vel_topic= '/cmd_vel'
@@ -391,7 +391,10 @@ class ControlBot():
         self.mppi = MPPI()
         self.goal=None
         self.waypt_track = None
+        self.goal_pose_pub= rospy.Publisher("Waypt", PoseStamped, queue_size=10)
+        self.waypt_goal =PoseStamped()
         self.get_path()
+
 
     # Service Request Function
     def get_path(self, ):
@@ -401,7 +404,10 @@ class ControlBot():
             goal_srv = rospy.ServiceProxy("global_path", global_path)
             reached_goal =True
             response = goal_srv(reached_goal)
+            self.global_path = response.path
+            rospy.loginfo(response)
             self.waypt_track = WayptTracker(response.path)
+
         except rospy.ServiceException as e:
             rospy.loginfo("Service Exception: {}".format(e))        
 
@@ -426,16 +432,22 @@ class ControlBot():
         roll, pitch, yaw = euler_from_quaternion(quaternion)
         self.yaw =yaw
         self.state = np.array([x,y, yaw])
-        goal = self.waypt_track.get_curr_waypt(self.state)
-
-
+        goal, pose, done  = self.waypt_track.get_curr_waypt(self.state)
+        if done:
+          # Publishing zero vel
+          cmd_vel= Twist()
+          self.pub.publish(cmd_vel)
+          self.get_path()
+           
 
         action= self.mppi.get_action(self.state, goal)
         cmd_vel = Twist()
         cmd_vel.linear.x =action[0]
         cmd_vel.angular.z =action[1]
         self.pub.publish(cmd_vel)
-        rospy.loginfo(f"Action: {action}")
+        self.goal_pose_pub.publish(pose)
+
+        rospy.loginfo(f"Action: {action}")  
         # rospy.loginfo(f"{x}, {y}, {yaw}")
 
     # Function to perform dilation
@@ -446,7 +458,7 @@ class ControlBot():
         # Perform binary dilation with specified size
         dilated_map = binary_dilation(binary_map, structure=np.ones((dilation_size, dilation_size)))
         
-        # Convert back to original values
+        # Convert back to original valuespath = Path()
         dilated_map = np.where(dilated_map, 100, map_array)
         
         return dilated_map
@@ -471,26 +483,6 @@ class ControlBot():
 
       unique_elements, counts = np.unique(data.data, return_counts=True)
 
-      # Zip the unique elements and their counts together for easy printing
-      freq_table = dict(zip(unique_elements, counts))
-
-      # print("Frequency Table:")
-      # for element, count in freq_table.items():
-      #     rospy.loginfo(f"{element}: {count}")
-
-      # rospy.loginfo(f"Grid Map: {grid_array}")
-      # # Create a publisher for the grayscale image. Replace 'grayscale_image_topic' with the desired topic name.
-      # image_pub = rospy.Publisher('grayscale_image_topic', Image, queue_size=10)
-
-      # # Initialize OpenCV bridge
-      # bridge = CvBridge()
-
-
-      # ros_image_msg = bridge.cv2_to_imgmsg(image, encoding="mono8")
-
-      # # Publish the grayscale image
-      # image_pub.publish(ros_image_msg)
-      # rospy.loginfo(data.header)
 
 
 
@@ -532,11 +524,16 @@ class WayptTracker():
       if distance < threshold_distance:
           # Update the waypoint to a new position
           self.i+=1
+      if self.i>=len(self.path):
+        return np.array([x,y]), pose,True
       pose = self.path[self.i]
       x = pose.pose.position.x
       y = pose.pose.position.y
 
-      return np.array([x,y])
+
+
+  
+      return np.array([x,y]),pose, False
 
 
 
