@@ -10,6 +10,7 @@ from planner.srv import global_path, global_pathResponse
 import cv2
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+from scipy.ndimage import binary_dilation
 
 class Unicycle():
 
@@ -58,8 +59,8 @@ class MPPI:
         map_metadata_obj=None,
         motion_model= Unicycle(),
         v_min=0, v_max=0.2, w_min=-np.pi, w_max=np.pi,
-        num_rollouts = 50,
-        num_steps = 10,
+        num_rollouts = 100,
+        num_steps = 50,
         lamda = 0.1,
         #env = gymnasium.Env                                        <<<<<<<<<<<<<<<<<<<<<<<<
     ):
@@ -88,7 +89,7 @@ class MPPI:
       V_samples = np.random.normal(0, 0.01, size=(self.num_rollouts, self.num_steps))
       V_scaled_samples = np.clip(V_samples, -1, 1)
       dv = V_scaled_samples
-      W_samples = np.random.normal(0, 0.4, size=(self.num_rollouts, self.num_steps))
+      W_samples = np.random.normal(0, 0.5, size=(self.num_rollouts, self.num_steps))
       W_scaled_samples = np.clip(W_samples, -1, 1)
       dw = W_scaled_samples * 2 * np.pi
       perturbations = []
@@ -116,7 +117,7 @@ class MPPI:
       len_squ = (x_relative)**2 + (y_relative)**2
 
       # lets consider tangential velocity 1m/s
-      v = 1
+      v = 0.12
       if y_relative==0:
         w = 0.001
       else:
@@ -149,32 +150,6 @@ class MPPI:
         distance = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
         return distance
 
-    def world_coordinates_to_map_indices(self, world_coordinates, resolution, origin):
-      """
-      Converts world coordinates to grid indices.
-      Args:
-          world_coordinates (tuple or list): World coordinates (x, y) in meters.
-          resolution (float): Resolution of the map (cell size) in meters.
-          origin (tuple or list): Origin of the map (x, y, theta) in meters and radians.
-      Returns:
-          tuple: Grid indices (i, j) in row and column format.
-      """
-      x, y = world_coordinates
-      x_origin, y_origin, theta_origin = origin
-
-      # Calculate relative position from origin of map
-      dx = x - x_origin
-      dy = y - y_origin
-
-      # Rotate relative position based on origin theta
-      x_rotated = dx * np.cos(-theta_origin) - dy * np.sin(-theta_origin)
-      y_rotated = dx * np.sin(-theta_origin) + dy * np.cos(-theta_origin)
-
-      # Convert to grid indices
-      i = int(y_rotated / resolution)
-      j = int(x_rotated / resolution)
-
-      return i, j
 
     def world_to_grid(self, world_coordinates, map_obj):
       """
@@ -201,12 +176,19 @@ class MPPI:
       q_y = origin.orientation.y
       q_z = origin.orientation.z
       q_w = origin.orientation.w
+      quaternion = (
+      q_x,
+      q_y,
+      q_z,
+      q_w
+      )
 
+      roll, pitch, yaw = euler_from_quaternion(quaternion)
       ## Quaternion to eulor conversion
       # yaw (z-axis rotation)
-      siny_cosp = +2.0 * (q_w * q_z + q_x * q_y)
-      cosy_cosp = +1.0 - 2.0 * (q_y * q_y + q_z * q_z)  
-      yaw = np.arctan2(siny_cosp, cosy_cosp)
+      # siny_cosp = +2.0 * (q_w * q_z + q_x * q_y)
+      # cosy_cosp = +1.0 - 2.0 * (q_y * q_y + q_z * q_z)  
+      # yaw = np.arctan2(siny_cosp, cosy_cosp)
       theta_origin = yaw
 
       # Calculate relative position from origin
@@ -222,9 +204,9 @@ class MPPI:
       j = int(x_rotated / resolution)
 
       # Check if point is inside the map
-      inside_map = 0 <= i < height and 0 <= j < width
+      inside_map = 0 <= j < height and 0 <= i < width
 
-      return (i, j), inside_map
+      return (j, i), inside_map
 
     def score_rollouts(self,initial_state: np.ndarray, goal_pos: np.ndarray, NxTplus1_states: np.ndarray):
       """
@@ -235,12 +217,14 @@ class MPPI:
       N, T_plus_1, _ = NxTplus1_states.shape
       D = self.calculate_distance(initial_state[:-1], goal_pos) # Distance form initial state to goal
       N_costs = []
+      hit_wall_count = 0
+      self.test_positions = []
       for n in range(N):
         cost = 0
         reached_goal = False
         hit_wall = 0
         for t in range(T_plus_1):
-          if hit_wall!=0:
+          if hit_wall!= 0 and hit_wall != -1 :
             cost += 0
           elif reached_goal:
             cost += 0
@@ -252,16 +236,16 @@ class MPPI:
             ######
             # example
             world_coords = np.array([x, y])
-
             map_indices, inside_map = self.world_to_grid(world_coords, self.map_metadata_obj)
+            self.test_positions.append(map_indices)
             row_index, col_index = map_indices
-            if inside_map:
-              hit_wall = self.map[row_index, col_index]
-            else:
-              hit_wall = 1
+            hit_wall = self.map[col_index, row_index]
+
 
             #print("hit_wall :", hit_wall)
-            if hit_wall != 0:
+            if hit_wall != 0 and hit_wall != -1 :
+              #rospy.loginfo("hit_wall:"+str(hit_wall))
+              hit_wall_count += 1
               cost += 10000
             elif d<=0.1:
               reached_goal = True
@@ -271,10 +255,14 @@ class MPPI:
         total_cost = cost/(self.num_steps)
         N_costs.append(total_cost)
       N_costs = np.array(N_costs)
+      rospy.loginfo("Hit count: " + str(hit_wall_count))
+
+
       return N_costs
 
     def get_action(self, initial_state: np.array, goal_pos: np.ndarray) -> np.array:
         """ Your implementation here """
+
         ## Step 1 : Creating the random samples of N control perturbations seqences
         if self.perturbations is None:
           self.generate_perturbations()
@@ -306,6 +294,7 @@ class MPPI:
         exp_costs = np.exp(-1*N_costs/self.lamda)
         sum_exp_costs = np.sum(exp_costs)
 
+        #rospy.loginfo(N_costs)
         N_weights = exp_costs/(sum_exp_costs + 0.000001)
 
         # 4.2 : Updating the initial control sequence
@@ -326,13 +315,64 @@ class MPPI:
 
         # 4.3 Plot the updated trajectory
         # passing through simulatior or kinematics model
-        NxTplus1_states = self.simulting_action_seq(initial_state, np.expand_dims(updated_u_dash, axis=0))
+        NxTplus1_states_final = self.simulting_action_seq(initial_state, np.expand_dims(updated_u_dash, axis=0))
         #self.plot_rollouts(initial_state, goal_pos, NxTplus1_states, env)                             #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
-        '''
-        Atharva Code: Ros Image Map check
-        '''
+
+        #Abhishek code: cv image plotting for testing
+
+        self.map_image = np.zeros((self.map_metadata_obj.height, self.map_metadata_obj.width, 3), dtype=np.uint8) 
+        
+        # # Define colors for map values
+        # colors = {0: (255, 255, 255),  # White for obstacles or free space
+        #           1: (0, 255, 0),      # Green for traversable areas
+        #           -1: (0, 0, 255)}     # Red for unknown or special areas
+
+        # # Draw map based on map data
+        # for y in range(self.map_metadata_obj.height):
+        #     for x in range(self.map_metadata_obj.width):
+        #         map_value = self.map[y, x]
+        #         color = colors.get(map_value, (128, 128, 128))  # Gray for unknown values
+        #         cv2.rectangle(self.map_image, (x, y), (x+1, y+1), color, -1)
+
+        # # Draw robot position
+
+        # world_coords = np.array([initial_state[0],initial_state[1]])
+
+        # map_indices, inside_map = self.world_to_grid(world_coords, self.map_metadata_obj)
+
+        # robot_x, robot_y = map_indices
+        # rospy.loginfo(map_indices)
+        # cv2.circle(self.map_image, (robot_x, robot_y), 3, (0, 0, 0), -1)  # Black circle for robot
+        # cv2.circle(self.map_image, self.test_positions[10], 2, (255, 255, 0), -1)
+
+        # # Display the map with robot
+        # cv2.imshow('Map with Robot', self.map_image)
+        # cv2.waitKey(0)  # Wait for any key press to close the window
+
+
+        ## publishing local path 
+
+        # Create a Path message
+        path_msg = Path()
+        path_msg.header.stamp = rospy.Time.now()
+        path_msg.header.frame_id = "map"  # Specify the frame ID
+
+        # Create some sample poses and add them to the path
+        for t in range(self.num_rollouts):
+          for i in range(self.num_steps):
+              pose = PoseStamped()
+              pose.header.stamp = rospy.Time.now()
+              pose.header.frame_id = "map"
+              pose.pose.position.x = NxTplus1_states[t][i][0]
+              pose.pose.position.y = NxTplus1_states[t][i][1]
+              pose.pose.position.z = 0.0 
+              path_msg.poses.append(pose)
+
+        # Publish the path
+        path_pub.publish(path_msg)
+
         return updated_u_dash[0]
 
 
@@ -342,6 +382,8 @@ class ControlBot():
         rospy.init_node('local_planner', anonymous=True)
         cmd_vel_topic= '/cmd_vel'
         self.pub = rospy.Publisher(cmd_vel_topic, Twist, queue_size=10)
+
+
         self.map_topic = "/map"
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
@@ -377,9 +419,15 @@ class ControlBot():
         rotation.z,
         rotation.w
         )
+        self.x=x
+        self.y=y
+
         roll, pitch, yaw = euler_from_quaternion(quaternion)
+        self.yaw =yaw
         self.state = np.array([x,y, yaw])
         goal = self.waypt_track.get_curr_waypt(self.state)
+
+
 
         action= self.mppi.get_action(self.state, goal)
         cmd_vel = Twist()
@@ -388,6 +436,19 @@ class ControlBot():
         self.pub.publish(cmd_vel)
         rospy.loginfo(f"Action: {action}")
         # rospy.loginfo(f"{x}, {y}, {yaw}")
+
+    # Function to perform dilation
+    def dilate_obstacles(self, map_array, dilation_size):
+        # Convert obstacles (100) to binary (1) and free spaces to binary (0)
+        binary_map = np.where(map_array == 100, 1, 0)
+        
+        # Perform binary dilation with specified size
+        dilated_map = binary_dilation(binary_map, structure=np.ones((dilation_size, dilation_size)))
+        
+        # Convert back to original values
+        dilated_map = np.where(dilated_map, 100, map_array)
+        
+        return dilated_map
 
     def map_cb(self, data):
 
@@ -398,21 +459,37 @@ class ControlBot():
       # Convert 1D grid data to 2D numpy array
       grid_array = np.array(grid_data).reshape((height, width))
 
-      self.mppi.map = grid_array
+      rospy.loginfo("grid_data shape"+ str(len(grid_data)))
+      # dialation of map
+      dilation_size = 4  
+      dialated_map = self.dilate_obstacles(grid_array, dilation_size)
+
+      self.mppi.map = dialated_map
       self.mppi.map_metadata_obj = data.info
       image = ((grid_array + 1) * 127.5).astype(np.uint8)
-      # Create a publisher for the grayscale image. Replace 'grayscale_image_topic' with the desired topic name.
-      image_pub = rospy.Publisher('grayscale_image_topic', Image, queue_size=10)
 
-      # Initialize OpenCV bridge
-      bridge = CvBridge()
+      unique_elements, counts = np.unique(data.data, return_counts=True)
+
+      # Zip the unique elements and their counts together for easy printing
+      freq_table = dict(zip(unique_elements, counts))
+
+      # print("Frequency Table:")
+      # for element, count in freq_table.items():
+      #     rospy.loginfo(f"{element}: {count}")
+
+      # rospy.loginfo(f"Grid Map: {grid_array}")
+      # # Create a publisher for the grayscale image. Replace 'grayscale_image_topic' with the desired topic name.
+      # image_pub = rospy.Publisher('grayscale_image_topic', Image, queue_size=10)
+
+      # # Initialize OpenCV bridge
+      # bridge = CvBridge()
 
 
-      ros_image_msg = bridge.cv2_to_imgmsg(image, encoding="mono8")
+      # ros_image_msg = bridge.cv2_to_imgmsg(image, encoding="mono8")
 
-      # Publish the grayscale image
-      image_pub.publish(ros_image_msg)
-      rospy.loginfo(data.header)
+      # # Publish the grayscale image
+      # image_pub.publish(ros_image_msg)
+      # rospy.loginfo(data.header)
 
 
 
@@ -469,6 +546,9 @@ class WayptTracker():
 
 if __name__ == '__main__':
     try:
+      # publising local path 
+      #rospy.init_node('path_publisher_node', anonymous=True)
+      path_pub = rospy.Publisher('/path_topic', Path, queue_size=10)
       cb = ControlBot()
       cb.run_control()
     except rospy.ROSInterruptException:
