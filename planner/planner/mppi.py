@@ -1,7 +1,7 @@
 import rospy
 import numpy as np
 import motion_model
-from planner.scripts.motion_model import Unicycle
+from planner.motion_model import Unicycle
 
 # class Unicycle():
 
