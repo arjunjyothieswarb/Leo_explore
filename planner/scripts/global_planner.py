@@ -63,25 +63,34 @@ class GlobalPlanner(DummyGlobalPlanner):
         super().__init__()
         self.reach_goal = False
         self.start = PoseStamped()
-        self.start.pose.position.x = 3  
-        self.start.pose.position.y = 3
-        self.map_size = (100, 100)
+        self.resolution = 0.05 #meter/grid
+        self.origin = PoseStamped() # Origin of world coordinates
+        self.origin.pose.position.x = 0 #meter
+        self.origin.pose.position.y = 0 #meter
+        self.origin.pose.orientation.w = 1.0  # Assume no rotation
+        self.map_size = (384, 384)
         self.map = self.generate_map()
         self.path = Path()
-
+        self.path_publisher = rospy.Publisher("path_topic", Path, queue_size=10)
     
 
     def generate_map(self):
-        map = np.zeros(self.map_size, dtype=int)
-        return map
+        return np.zeros(self.map_size, dtype=int)
+    
+    def world_to_grid(self, world_coordinates):
+        """Converts world coordinates to grid indices."""
+        x, y = world_coordinates
+        ix = int((x - self.origin.pose.position.x) / self.resolution)
+        iy = int((y - self.origin.pose.position.y) / self.resolution)
+        return (ix, iy)
 
     def heuristic(self, a, b):
-        return hypot(b.pose.position.x - a.pose.position.x, b.pose.position.y - a.pose.position.y)
+        return hypot(b[0] - a[0], b[1] - a[1])
 
     def calculate_path(self):
         #use Astar algorithm
-        start = (int(self.start.pose.position.x), int(self.start.pose.position.y))
-        goal = (int(self.goal.pose.position.x), int(self.goal.pose.position.y))
+        start = self.world_to_grid((self.start.pose.position.x, self.start.pose.position.y))
+        goal = self.world_to_grid((self.goal.pose.position.x, self.goal.pose.position.y))
 
         frontier = []
         heapq.heappush(frontier, (0, start))
@@ -104,15 +113,20 @@ class GlobalPlanner(DummyGlobalPlanner):
                         heapq.heappush(frontier, (priority, next))
                         came_from[next] = current
 
-        # Reconstruct path
+        path = self.reconstruct_path(came_from, start, goal)
+        self.publish_path(path)
+        return path  # Returning the path as a list of coordinates
+
+    def reconstruct_path(self, came_from, start, goal):
+        """Reconstruct the path from start to goal."""
         path = []
         current = goal
         while current != start:
             path.append(current)
             current = came_from[current]
         path.append(start)
-        path.reverse()  # optional
-        self.publish_path(path)
+        path.reverse()
+        return path
 
     def publish_path(self, path):
         self.path = Path()
@@ -121,8 +135,8 @@ class GlobalPlanner(DummyGlobalPlanner):
         for p in path:
             pose = PoseStamped()
             pose.header = self.path.header
-            pose.pose.position.x = p[0]
-            pose.pose.position.y = p[1]
+            pose.pose.position.x = p[0] * self.resolution + self.origin.pose.position.x
+            pose.pose.position.y = p[1] * self.resolution + self.origin.pose.position.y
             pose.pose.orientation.w = 1.0
             self.path.poses.append(pose)
         self.path_publisher.publish(self.path)
