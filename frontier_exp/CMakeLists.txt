@@ -9,6 +9,7 @@ project(frontier_exp)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
+  sensor_msgs
   nav_msgs
   rospy
   std_msgs
