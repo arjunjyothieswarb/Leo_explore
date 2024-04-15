@@ -23,11 +23,11 @@ class DummyGlobalPlanner():
             self.path = Path()
             self.path.header.frame_id = 'map'
             self.path.header.stamp = rospy.Time.now()
-            rospy.loginfo("1")
+            # rospy.loginfo("1")
             self.get_goal()
-            rospy.loginfo("2")
+            # rospy.loginfo("2")
             self.calculate_path()
-            rospy.loginfo("3")
+            # rospy.loginfo("3")
             print(self.path)
             return global_pathResponse(self.path)
         else:
@@ -141,6 +141,14 @@ class GlobalPlanner(DummyGlobalPlanner):
             self.path.poses.append(pose)
         self.path_publisher.publish(self.path)
 
+    def calculate_path(self):
+        '''
+        Add Path Calculation Logic
+        use self.path storing path
+        use self.map for latest map
+        '''
+        return super().calculate_path()
+
 
 
 if __name__ == "__main__":
@@ -150,3 +158,4 @@ if __name__ == "__main__":
         gp.start_service()
     else:
         gp = GlobalPlanner()
+        gp.start_service()

@@ -1,6 +1,6 @@
 import numpy as np
 
-class Unicycle():
+class Unicycle:
 
     def __init__(self, v_min=0, v_max=1, w_min=-2 * np.pi, w_max=2 * np.pi):
         self.v_min= v_min
