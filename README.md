@@ -24,7 +24,7 @@ $ sudo apt-get install ros-noetic-turtlebot3-teleop
 Set Environment Variable:
 ```bash
 $ export TURTLEBOT3_MODEL=burger
-``
+```
 
 Terminal 1:  
 ```bash
