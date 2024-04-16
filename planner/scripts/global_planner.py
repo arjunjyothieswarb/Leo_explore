@@ -107,15 +107,15 @@ class GlobalPlanner(DummyGlobalPlanner):
             next = (current[0] + dx, current[1] + dy)
             if 0 <= next[0] < self.map_size[0] and 0 <= next[1] < self.map_size[1] and self.map[next[0], next[1]] == 0:
                 if dx != 0 and dy != 0:
-                    new_cost = cost_so_far[current] + 1.414  # 对角移动代价，sqrt(2) 约等于 1.414
+                    new_cost = cost_so_far[current] + 1.414
                 else:
-                    new_cost = cost_so_far[current] + 1  # 直线移动代价
+                    new_cost = cost_so_far[current] + 1  
                 if next not in cost_so_far or new_cost < cost_so_far[next]:
                     cost_so_far[next] = new_cost
                     priority = new_cost + self.heuristic(next, goal)
                     heapq.heappush(frontier, (priority, next))
                     came_from[next] = current
-                    
+
         path = self.reconstruct_path(came_from, start, goal)
         self.publish_path(path)
         return path  # Returning the path as a list of coordinates
