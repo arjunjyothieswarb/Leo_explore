@@ -9,13 +9,22 @@ from planner.srv import global_path, global_pathResponse
 from nav_msgs.msg import Path
 
 
-class DummyGlobalPlanner():
+class GlobalPlanner():
     def __init__(self):
-        # Initialize the ROS node
-        rospy.init_node('dummy_global_planner', anonymous=True)
+        rospy.init_node('global_planner', anonymous=True)
         self.goal =PoseStamped()
-        self.reach_goal = True
-
+        self.reach_goal = False
+        self.start = PoseStamped()
+        self.resolution = 0.05 #meter/grid
+        self.origin = PoseStamped() # Origin of world coordinates
+        self.origin.pose.position.x = 0 #meter
+        self.origin.pose.position.y = 0 #meter
+        self.origin.pose.orientation.w = 1.0  # Assume no rotation
+        # self.map_size = (384, 384)
+        # self.map = self.generate_map()
+        self.path = Path()
+        self.path_publisher = rospy.Publisher("path_topic", Path, queue_size=10)
+    
     def path_cb(self, request):
         rospy.loginfo(request)
         if request.reached_goal:
@@ -33,7 +42,6 @@ class DummyGlobalPlanner():
         else:
             return None
 
- 
     def start_service(self):
         self.listen_service = rospy.Service("global_path", global_path, self.path_cb)
         rospy.spin()
@@ -51,31 +59,9 @@ class DummyGlobalPlanner():
             self.goal = response.goal
         except rospy.ServiceException as e:
             rospy.loginfo("Service Exception: {}".format(e))
-    
 
-    def calculate_path(self):
-        # Just appending the goal_point as waypt
-        self.path.poses.append(self.goal)
-
-
-class GlobalPlanner(DummyGlobalPlanner):
-    def __init__(self):
-        super().__init__()
-        self.reach_goal = False
-        self.start = PoseStamped()
-        self.resolution = 0.05 #meter/grid
-        self.origin = PoseStamped() # Origin of world coordinates
-        self.origin.pose.position.x = 0 #meter
-        self.origin.pose.position.y = 0 #meter
-        self.origin.pose.orientation.w = 1.0  # Assume no rotation
-        self.map_size = (384, 384)
-        self.map = self.generate_map()
-        self.path = Path()
-        self.path_publisher = rospy.Publisher("path_topic", Path, queue_size=10)
-    
-
-    def generate_map(self):
-        return np.zeros(self.map_size, dtype=int)
+    # def generate_map(self):
+    #     return np.zeros(self.map_size, dtype=int)
     
     def world_to_grid(self, world_coordinates):
         """Converts world coordinates to grid indices."""
@@ -147,9 +133,5 @@ class GlobalPlanner(DummyGlobalPlanner):
 
 
 if __name__ == "__main__":
-    dummy_on = rospy.get_param('dummy', True)
-    if dummy_on:
-        gp = DummyGlobalPlanner()
-        gp.start_service()
-    else:
-        gp = GlobalPlanner()
+    gp = GlobalPlanner()
+    gp.start_service()
