@@ -3,7 +3,6 @@ from nav_msgs.msg import OccupancyGrid, Path
 from geometry_msgs.msg import PoseStamped
 from planner.srv import *
 from planner.A_star import *
-from tf.transformations import euler_from_quaternion
 import tf2_ros
 
 import numpy as np
@@ -71,10 +70,8 @@ class GlobalPlanner():
         
         pose_y = np.int16((current_pose.transform.translation.y - self.map.info.origin.position.y)/self.map.info.resolution)
         pose_x = np.int16((current_pose.transform.translation.x - self.map.info.origin.position.x)/self.map.info.resolution)
-        # (pose_y, pose_x), _ = self.world_to_grid((current_pose.transform.translation.y, current_pose.transform.translation.x), self.map.info)
 
         pose_index = (pose_x, pose_y)
-        # rospy.loginfo(self.map.info)
         
         goal_x = np.int16((goal_pose.pose.position.y - self.map.info.origin.position.y)/self.map.info.resolution)
         goal_y = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
@@ -128,64 +125,6 @@ class GlobalPlanner():
             map_data[i] = np.array(self.map.data[base_index:end_index])
         
         return map_data
-    
-    def world_to_grid(self, world_coordinates, map_obj):
-      """
-      Converts world coordinates to grid indices and checks if the point is inside the map.
-      
-      Args:
-          world_coordinates (tuple or list): World coordinates (x, y) in meters.
-          map_obj (dict): Map object containing resolution, width, height, and origin information.
-          
-      Returns:
-          tuple: Grid indices.
-          bool: True if point is inside the map else False.
-      """
-      x, y = world_coordinates
-      resolution = map_obj.resolution
-      width = map_obj.width
-      height = map_obj.height
-      origin = map_obj.origin
-
-      x_origin = origin.position.x
-      y_origin = origin.position.y
-
-      q_x = origin.orientation.x
-      q_y = origin.orientation.y
-      q_z = origin.orientation.z
-      q_w = origin.orientation.w
-      quaternion = (
-      q_x,
-      q_y,
-      q_z,
-      q_w
-      )
-
-      roll, pitch, yaw = euler_from_quaternion(quaternion)
-      ## Quaternion to eulor conversion
-      # yaw (z-axis rotation)
-      # siny_cosp = +2.0 * (q_w * q_z + q_x * q_y)
-      # cosy_cosp = +1.0 - 2.0 * (q_y * q_y + q_z * q_z)  
-      # yaw = np.arctan2(siny_cosp, cosy_cosp)
-      theta_origin = yaw
-
-      # Calculate relative position from origin
-      dx = x - x_origin
-      dy = y - y_origin
-
-      # Rotate relative position based on origin theta
-      x_rotated = dx * np.cos(-theta_origin) - dy * np.sin(-theta_origin)
-      y_rotated = dx * np.sin(-theta_origin) + dy * np.cos(-theta_origin)
-
-      # Convert to grid indices
-      i = int(y_rotated / resolution)
-      j = int(x_rotated / resolution)
-
-      # Check if point is inside the map
-      inside_map = 0 <= j < height and 0 <= i < width
-
-      return (j, i), inside_map
-    
 
 if __name__ == '__main__':
     GlobalPlanner()
