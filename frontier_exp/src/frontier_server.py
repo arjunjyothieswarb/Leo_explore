@@ -10,6 +10,8 @@ from sensor_msgs.msg import PointCloud
 from planner.srv import frontier_goal, frontier_goalResponse
 
 import numpy as np
+import jax.numpy as jnp
+import jax.scipy as jcp
 from sklearn.cluster import KMeans
 import time
 
@@ -21,6 +23,7 @@ class Frontier_Exp():
         
         self.neighbourhood = 5
         self.n = np.int8((self.neighbourhood - 1)/2)
+        self.ker = np.ones((self.neighbourhood, self.neighbourhood), dtype=jnp.int8)
         self.candidate_match = 13
         self.cluster_number = 8
         
@@ -53,10 +56,9 @@ class Frontier_Exp():
         map_data[map_data > 0] = (self.neighbourhood**2) + 5
 
         # Getting cadidates
-        for i in range(self.n, height - self.n - 1):
-            for j in range(self.n, width - self.n - 1):
-                if np.sum(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]) == -self.candidate_match:
-                    candidates.append([i,j])
+        map_data = jnp.array(map_data)
+        map_data = jcp.signal.convolve(map_data, self.ker,'same')
+        candidates = jnp.argwhere(map_data == -self.candidate_match)
 
         # Clustering the candidates
         labels, centroid = self.get_cluster(candidates)
