@@ -1,8 +1,8 @@
 import numpy as np
 
-class Unicycle:
+class Unicycle():
 
-    def __init__(self, v_min=0, v_max=1, w_min=-2 * np.pi, w_max=2 * np.pi):
+    def __init__(self, v_min=0.0, v_max=0.2, w_min=-2.0, w_max=2.0):
         self.v_min= v_min
         self.v_max = v_max
         self.w_min = w_min
@@ -39,4 +39,3 @@ class Unicycle:
         next_state = next_state.squeeze()
 
         return next_state
-

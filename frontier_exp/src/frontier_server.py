@@ -72,6 +72,7 @@ class Frontier_Exp():
             rand_val = np.random.randint(0,np.shape(labels)[0] - 1)
         
         goal_pose = candidates[rand_val]
+        rospy.loginfo(f"Index: {goal_pose}")
 
         goal_final= self.test_output(goal_pose)
         

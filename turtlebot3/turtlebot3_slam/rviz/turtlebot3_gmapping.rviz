@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /TF1/Frames1
         - /Map1
+        - /TF2
       Splitter Ratio: 0.594406008720398
     Tree Height: 719
   - Class: rviz/Selection
@@ -171,7 +172,7 @@ Visualization Manager:
       Enabled: true
       Filter (blacklist): ""
       Filter (whitelist): ""
-      Frame Timeout: 15
+      Frame Timeout: 1
       Frames:
         All Enabled: true
         base_footprint:
@@ -180,6 +181,8 @@ Visualization Manager:
           Value: true
         base_scan:
           Value: true
+        camera:
+          Value: true
         caster_back_link:
           Value: true
         imu_link:
@@ -187,6 +190,14 @@ Visualization Manager:
         map:
           Value: true
         odom:
+          Value: true
+        tag_0:
+          Value: true
+        tag_1:
+          Value: true
+        tag_2:
+          Value: true
+        tag_7:
           Value: true
         wheel_left_link:
           Value: true
@@ -205,6 +216,15 @@ Visualization Manager:
               base_link:
                 base_scan:
                   {}
+                camera:
+                  tag_0:
+                    {}
+                  tag_1:
+                    {}
+                  tag_2:
+                    {}
+                  tag_7:
+                    {}
                 caster_back_link:
                   {}
                 imu_link:
@@ -268,7 +288,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 106.56851196289062
+      Scale: 331.8192138671875
       Target Frame: map
       X: 0
       Y: 0

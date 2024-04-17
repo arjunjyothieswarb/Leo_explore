@@ -163,7 +163,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/dummy_frontier_server.py scripts/global_planner.py scripts/local_planner.py planner/motion_model.py planner/mppi.py
+  scripts/dummy_frontier_server.py scripts/global_planner.py scripts/global_planner1.py scripts/local_planner.py scripts/local_planner_server.py planner/motion_model.py planner/mppi.py planner/A_star.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
