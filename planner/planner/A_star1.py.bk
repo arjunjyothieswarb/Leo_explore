@@ -1,0 +1,74 @@
+#import numpy as np
+#import time
+#from random import randint
+from math import hypot
+import heapq
+
+def heuristic(a, b):
+    return hypot(b[0] - a[0], b[1] - a[1])
+
+def reconstruct_path(came_from, start, goal):
+    path = []
+    current = goal
+    while current != start:
+        path.append(current)
+        current = came_from[current]
+    path.append(start)
+    path.reverse()
+    return path
+
+def a_star_search(grid, start, goal):
+    frontier = []
+    heapq.heappush(frontier, (0, start))
+    came_from = {start: None}
+    cost_so_far = {start: 0}
+
+    while frontier:
+        current = heapq.heappop(frontier)[1]
+
+        if current == goal:
+            return reconstruct_path(came_from, start, goal)
+
+        for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+            next = (current[0] + dx, current[1] + dy)
+            if 0 <= next[0] < len(grid) and 0 <= next[1] < len(grid[0]):
+                if grid[next[0]][next[1]] in (100, -1):  # Checking for obstacles and unknowns
+                    continue
+                if dx != 0 and dy != 0:
+                    new_cost = cost_so_far[current] + 1.414  # Diagonal movement cost
+                else:
+                    new_cost = cost_so_far[current] + 1  # Straight movement cost
+                if next not in cost_so_far or new_cost < cost_so_far[next]:
+                    cost_so_far[next] = new_cost
+                    priority = new_cost + heuristic(next, goal)
+                    heapq.heappush(frontier, (priority, next))
+                    came_from[next] = current
+
+    return False
+
+# Example 1
+# grid = [
+#     [1, 100, 1, 100, 1],
+#     [1, 100, 1, 1, 1],
+#     [1, 1, 1, 1, 1],
+#     [1, 1, 1, 100, 1],
+#     [1, 1, 1, 1, 1]
+# ]
+# start = (0, 0)
+# goal = (4, 4)
+# path = a_star_search(grid, start, goal)
+# print(path)
+
+# Example 2
+# grid_size = 384
+# grid = np.ones((grid_size, grid_size), dtype=int)
+# choices = [-1, 1, 100]
+# start = (np.random.randint(grid_size), np.random.randint(grid_size))
+# goal = (np.random.randint(grid_size), np.random.randint(grid_size))
+# start_time = time.time()
+# path = a_star_search(grid, start, goal)
+# used_time = time.time() - start_time
+# print(path)
+# print(used_time)
+
+

@@ -6,7 +6,9 @@ def heuristic(a, b):
 
 def a_star_search(grid, start, goal):
     # Directions for moving in the grid (up, down, left, right)
-    neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
+    # neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
+    delta = 1
+    neighbors = [(0, delta), (delta, 0), (0, -delta), (-delta, 0), (delta, delta), (delta, -delta), (-delta, -delta), (-delta, delta)]
     close_set = set()
     came_from = {}
     gscore = {start: 0}

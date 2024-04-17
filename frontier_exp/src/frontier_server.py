@@ -114,7 +114,7 @@ class Frontier_Exp():
 
 
     def get_cluster(self, point_dataset):
-        for i in range(11):
+        for i in range(5):
             kmeans = KMeans(init='k-means++', n_clusters=self.cluster_number)
             kmeans.fit(point_dataset)
         return kmeans.labels_, kmeans.cluster_centers_

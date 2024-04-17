@@ -16,6 +16,8 @@ class GlobalPlanner():
         self.map = OccupancyGrid()
         low_res_map = OccupancyGrid()
 
+        self.GOT_MAP = False
+
         kernel_size = 3
         stride = 3
 
@@ -24,6 +26,7 @@ class GlobalPlanner():
         rospy.Subscriber("/binary_cost_map", OccupancyGrid, self.get_map)
         self.pub_pose = rospy.Publisher("/next_pose", PoseStamped, queue_size=10)
         self.pub_path = rospy.Publisher("/goal_path", Path, queue_size=10)
+        self.pub_goal = rospy.Publisher("/incoming_goal", PoseStamped, queue_size=10)
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
@@ -39,7 +42,10 @@ class GlobalPlanner():
             
             try:
                 get_goal_pose = rospy.ServiceProxy("frontier_goal", frontier_goal)
+                if not self.GOT_MAP:
+                    continue
                 goal_pose = get_goal_pose(need_next_point)
+                self.pub_goal.publish(goal_pose.goal)
                 self.get_path(goal_pose.goal, kernel_size)
             
             except rospy.ServiceException as e:
@@ -75,18 +81,20 @@ class GlobalPlanner():
         pose_index = (pose_x, pose_y)
         # rospy.loginfo(self.map.info)
         
-        goal_x = np.int16((goal_pose.pose.position.y - self.map.info.origin.position.y)/self.map.info.resolution)
-        goal_y = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
+        goal_y = np.int16((goal_pose.pose.position.y - self.map.info.origin.position.y)/self.map.info.resolution)
+        goal_x = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
         goal_index = (goal_x, goal_y)
+        rospy.loginfo(f"Grid val: {self.map_data[goal_x][goal_y]}")
         start_index = (pose_x, pose_y)
         rospy.loginfo(f"Goal index: {goal_index}")
         rospy.loginfo(f"Start index: {start_index}")
 
         """The A* algorithm goes here"""
         # path = a_star_search(self.low_res_map, pose_index, goal_index)
+        if self.map_data[goal_x][goal_y] == 100:
+            return
         path = a_star_search(self.map_data, pose_index, goal_index)
-        # path_x = path[0] * np.int8((self.kernel_size + 1)/2)
-        # path_y = path[1] * np.int8((self.kernel_size + 1)/2)
+        
         
         for (x,y) in path:
             temp_pose = PoseStamped()
@@ -96,10 +104,11 @@ class GlobalPlanner():
             temp_pose.pose.position.y = float(y*self.map.info.resolution + self.map.info.origin.position.y)
             temp_pose.pose.position.z = 0.0
             temp_pose.pose.orientation.w = 1.0
-            rospy.loginfo(f"Path: {temp_pose.pose.position.x,temp_pose.pose.position.y}")
+            # rospy.loginfo(f"Path: {temp_pose.pose.position.x,temp_pose.pose.position.y}")
             path_msg.poses.append(temp_pose)
-        
-        rospy.loginfo(f"Start index: {len(path_msg.poses)}")
+            if self.map_data[x][y] == 100:
+                rospy.logwarn(f"Grid value is 100!")
+
 
         
         path_msg.header.stamp = rospy.Time.now()
@@ -113,7 +122,7 @@ class GlobalPlanner():
         # Getting and storing the latest map
         self.map = data
         self.map_data = self.OneD_to_twoD(self.map.info.height, self.map.info.width)
-    
+        self.GOT_MAP = True
 
 
     def OneD_to_twoD(self, height, width):
