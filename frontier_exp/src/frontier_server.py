@@ -7,6 +7,7 @@ from geometry_msgs.msg import Pose, PoseStamped
 from geometry_msgs.msg import Point32
 from nav_msgs.msg import OccupancyGrid
 from sensor_msgs.msg import PointCloud
+from planner.srv import frontier_goal, frontier_goalResponse
 
 import numpy as np
 from sklearn.cluster import KMeans
@@ -17,10 +18,6 @@ import time
 class Frontier_Exp():
 
     def __init__(self) -> None:
-
-        rospy.init_node("frontier_server")
-        
-        self.goal_pub = rospy.Publisher("/frontier_goal", PoseStamped, queue_size=10)
         
         self.neighbourhood = 5
         self.n = np.int8((self.neighbourhood - 1)/2)
@@ -30,11 +27,8 @@ class Frontier_Exp():
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
-        # goal_gen = rospy.Service()
-        # print("Frontier service armed!")
-        # rospy.spin()
-        while(not rospy.is_shutdown()):
-            self.get_goal()
+
+
 
 
 
@@ -61,7 +55,6 @@ class Frontier_Exp():
         # Getting cadidates
         for i in range(self.n, height - self.n - 1):
             for j in range(self.n, width - self.n - 1):
-                # if self.is_candidate(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]):
                 if np.sum(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]) == -self.candidate_match:
                     candidates.append([i,j])
 
@@ -79,9 +72,12 @@ class Frontier_Exp():
             rand_val = np.random.randint(0,np.shape(labels)[0] - 1)
         
         goal_pose = candidates[rand_val]
+        rospy.loginfo(f"Index: {goal_pose}")
 
-        self.test_output(goal_pose)
-        pass
+        goal_final= self.test_output(goal_pose)
+        
+        rospy.loginfo(f"Current Goal: {goal_final}")
+        return goal_final
 
 
 
@@ -95,7 +91,7 @@ class Frontier_Exp():
 
         # Getting the TF between the map and the robot
         try:
-            transform = self.tf_buffer.lookup_transform("map", "base_footprint", rospy.Time(0), rospy.Duration(5))
+            transform = self.tf_buffer.lookup_transform("base_footprint", "map", rospy.Time(0), rospy.Duration(5))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
                 rospy.logwarn("Transform lookup failed: {}".format(e))
 
@@ -133,30 +129,27 @@ class Frontier_Exp():
         goal.pose.position.x = float(goal_point[1]*self.map.info.resolution + self.map.info.origin.position.x)
         goal.pose.position.y = float(goal_point[0]*self.map.info.resolution + self.map.info.origin.position.y)
         goal.pose.position.z = 0.0
-        self.goal_pub.publish(goal)
+        
+        return goal
 
 
-    # def is_candidate(self, ker):
 
-    #     # This function checks the eligibility of the neighbourhood to be a candidate
-    #     # If it encounters an occupied cell, it returns False
-    #     # If the number of unexplored points are less, it returns False
 
-    #     # Counter for number of unexplored cells
-    #     counter = 0
+def frontier_cb(request):
+    if request.need_frontier:
+        pose = PoseStamped()
+        fs  = Frontier_Exp()
+        pose=  fs.get_goal()
+        return frontier_goalResponse(pose)
+    else:
+        return None
 
-    #     # Convolution... sort of
-    #     for i in range(self.neighbourhood):
-    #         for j in range(self.neighbourhood):
-    #             if ker[i,j] == 1:
-    #                 return False
-    #             elif ker[i,j] == 0:
-    #                 counter = counter + 1
 
-    #     if counter == self.candidate_match:
-    #         return True
-    #     else:
-    #         return False
+def get_goal():
+    rospy.init_node("frontier_server")
+    service = rospy.Service("frontier_goal", frontier_goal, frontier_cb)
+    rospy.spin()
 
-if __name__ == '__main__':
-    Frontier_Exp()
+
+if __name__ == "__main__":
+    get_goal()

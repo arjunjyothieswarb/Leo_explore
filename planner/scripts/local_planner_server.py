@@ -14,7 +14,6 @@ from cv_bridge import CvBridge
 from scipy.ndimage import binary_dilation
 
 
-
 class ControlBot():
     def __init__(self):
         # Initialize the ROS node

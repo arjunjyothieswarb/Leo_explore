@@ -1,0 +1,30 @@
+<launch>
+
+  <!-- SLAM NODE -->
+  <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch"/>
+
+
+  <!-- DECOMPRESS IMAGE TOPIC -->
+  <!-- NOT WORKING CANT FIND DOCUMENTATION -->
+  <!-- <node pkg="image_transport" type="republish" name="republish_node">
+    <param name="in" value="/raspicam_node/image"/>
+    <param name="out" value="/raspicam_node/image_rect"/>
+    <param name="type" value="compressed"/>
+  </node> -->
+
+  <!-- APRIL TAG DETECTION NODE-->
+  <include file="$(find apriltag_ros)/launch/continuous_detection.launch">
+    <arg name="camera_name" value="/raspicam_node" />
+  </include>
+
+   <!-- <node pkg="tf" type="static_transform_publisher" name="tf_cam_base" args="-0.032 0 0.12 0 0 0 /base_link /raspicam 100"/> -->
+   <node pkg="tf" type="static_transform_publisher" name="tf_raspicam_base" args="-0.032 0 0.12 -1.57 0 -1.57 /base_link /camera 100"/>
+
+  <!-- TELEOP
+  <include file="$(find turtlebot3_teleop)/launch/turtlebot3_teleop_key.launch"/> -->
+
+  <!-- RPI CAM 
+  <include file="$(find turtlebot3_bringup)/launch/turtlebot3_rpicamera.launch"/> -->
+
+</launch>
+
