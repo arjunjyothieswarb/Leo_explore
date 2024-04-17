@@ -1,161 +1,191 @@
-import rospy 
-import heapq
-import numpy as np
-from random import randint
-from math import hypot
+import rospy
+from nav_msgs.msg import OccupancyGrid, Path
 from geometry_msgs.msg import PoseStamped
-from planner.srv import frontier_goal, frontier_goalResponse
-from planner.srv import global_path, global_pathResponse
-from nav_msgs.msg import Path
+from planner.srv import *
+from planner.A_star import *
+from tf.transformations import euler_from_quaternion
+import tf2_ros
 
+import numpy as np
+import jax.numpy as jnp
+from jax.lax import reduce_window
 
-class DummyGlobalPlanner():
-    def __init__(self):
-        # Initialize the ROS node
-        rospy.init_node('dummy_global_planner', anonymous=True)
-        self.goal =PoseStamped()
-        self.reach_goal = True
+class GlobalPlanner():
 
-    def path_cb(self, request):
-        rospy.loginfo(request)
-        if request.reached_goal:
-            rospy.loginfo(request)
-            self.path = Path()
-            self.path.header.frame_id = 'map'
-            self.path.header.stamp = rospy.Time.now()
-            # rospy.loginfo("1")
-            self.get_goal()
-            # rospy.loginfo("2")
-            self.calculate_path()
-            # rospy.loginfo("3")
-            print(self.path)
-            return global_pathResponse(self.path)
-        else:
-            return None
-
- 
-    def start_service(self):
-        self.listen_service = rospy.Service("global_path", global_path, self.path_cb)
-        rospy.spin()
+    def __init__(self) -> None:
         
+        self.map = OccupancyGrid()
+        low_res_map = OccupancyGrid()
 
-    def get_goal(self):
-        # Request Server for goal pose
-        rospy.wait_for_service("frontier_goal")
-        rospy.loginfo("Goal getting service")
-        try:
-            goal_srv = rospy.ServiceProxy("frontier_goal", frontier_goal)
-            need_frontier =True
-            response = goal_srv(need_frontier)
-            rospy.loginfo(response)
-            self.goal = response.goal
-        except rospy.ServiceException as e:
-            rospy.loginfo("Service Exception: {}".format(e))
+        kernel_size = 3
+        stride = 3
+
+        rospy.init_node("GlobalPlanner")
+        
+        rospy.Subscriber("/binary_cost_map", OccupancyGrid, self.get_map)
+        self.pub_pose = rospy.Publisher("/next_pose", PoseStamped, queue_size=10)
+        self.pub_path = rospy.Publisher("/goal_path", Path, queue_size=10)
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+
+        first_run = 1
+        need_next_point = True
+
+        while(not rospy.is_shutdown()):
+
+            rospy.wait_for_service("frontier_goal")
+            
+            # self.low_res_map = self.down_sample(kernel_size, stride)
+            
+            try:
+                get_goal_pose = rospy.ServiceProxy("frontier_goal", frontier_goal)
+                goal_pose = get_goal_pose(need_next_point)
+                self.get_path(goal_pose.goal, kernel_size)
+            
+            except rospy.ServiceException as e:
+                print("Service call failed: %s"%e)
+
+            pass
+        pass
+
+
+
+    def down_sample(self,kernel_size, stride):
+        
+        map_data = np.array(self.map_data[:,:])
+        map_data[map_data < 0] = 50
+        map_data = jnp.array(map_data)
+
+        low_res_data = np.array(reduce_window(map_data, jnp.max, (kernel_size, kernel_size), (stride,stride)))
+        low_res_data = list(low_res_data)
+
+        return low_res_data
     
 
-    def calculate_path(self):
-        # Just appending the goal_point as waypt
-        self.path.poses.append(self.goal)
 
+    def get_path(self, goal_pose, kernel_size):
+        
+        path_msg = Path()
+        current_pose = self.tf_buffer.lookup_transform("map", "base_footprint", rospy.Duration(0))
+        
+        pose_y = np.int16((current_pose.transform.translation.y - self.map.info.origin.position.y)/self.map.info.resolution)
+        pose_x = np.int16((current_pose.transform.translation.x - self.map.info.origin.position.x)/self.map.info.resolution)
+        # (pose_y, pose_x), _ = self.world_to_grid((current_pose.transform.translation.y, current_pose.transform.translation.x), self.map.info)
 
-class GlobalPlanner(DummyGlobalPlanner):
-    def __init__(self):
-        super().__init__()
-        self.reach_goal = False
-        self.start = PoseStamped()
-        self.resolution = 0.05 #meter/grid
-        self.origin = PoseStamped() # Origin of world coordinates
-        self.origin.pose.position.x = 0 #meter
-        self.origin.pose.position.y = 0 #meter
-        self.origin.pose.orientation.w = 1.0  # Assume no rotation
-        self.map_size = (384, 384)
-        self.map = self.generate_map()
-        self.path = Path()
-        self.path_publisher = rospy.Publisher("path_topic", Path, queue_size=10)
+        pose_index = (pose_x, pose_y)
+        # rospy.loginfo(self.map.info)
+        
+        goal_x = np.int16((goal_pose.pose.position.y - self.map.info.origin.position.y)/self.map.info.resolution)
+        goal_y = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
+        goal_index = (goal_x, goal_y)
+        start_index = (pose_x, pose_y)
+        rospy.loginfo(f"Goal index: {goal_index}")
+        rospy.loginfo(f"Start index: {start_index}")
+
+        """The A* algorithm goes here"""
+        # path = a_star_search(self.low_res_map, pose_index, goal_index)
+        path = a_star_search(self.map_data, pose_index, goal_index)
+        # path_x = path[0] * np.int8((self.kernel_size + 1)/2)
+        # path_y = path[1] * np.int8((self.kernel_size + 1)/2)
+        
+        for (x,y) in path:
+            temp_pose = PoseStamped()
+            temp_pose.header.stamp = rospy.Time.now()
+            temp_pose.header.frame_id = "map"
+            temp_pose.pose.position.x = float(x*self.map.info.resolution + self.map.info.origin.position.x)
+            temp_pose.pose.position.y = float(y*self.map.info.resolution + self.map.info.origin.position.y)
+            temp_pose.pose.position.z = 0.0
+            temp_pose.pose.orientation.w = 1.0
+            rospy.loginfo(f"Path: {temp_pose.pose.position.x,temp_pose.pose.position.y}")
+            path_msg.poses.append(temp_pose)
+        
+        rospy.loginfo(f"Start index: {len(path_msg.poses)}")
+
+        
+        path_msg.header.stamp = rospy.Time.now()
+        path_msg.header.frame_id = "map"
+
+        self.pub_path.publish(path_msg)
+    
+    
+    
+    def get_map(self, data):
+        # Getting and storing the latest map
+        self.map = data
+        self.map_data = self.OneD_to_twoD(self.map.info.height, self.map.info.width)
     
 
-    def generate_map(self):
-        return np.zeros(self.map_size, dtype=int)
+
+    def OneD_to_twoD(self, height, width):
+        # Converting 1D array into 2D
+        
+        map_data = np.empty((height, width), dtype=np.int8)
+        
+        for i in range(height):
+            base_index = i*width
+            end_index = base_index + width
+            map_data[i] = np.array(self.map.data[base_index:end_index])
+        
+        return map_data
     
-    def world_to_grid(self, world_coordinates):
-        """Converts world coordinates to grid indices."""
-        x, y = world_coordinates
-        ix = int((x - self.origin.pose.position.x) / self.resolution)
-        iy = int((y - self.origin.pose.position.y) / self.resolution)
-        return (ix, iy)
+    def world_to_grid(self, world_coordinates, map_obj):
+      """
+      Converts world coordinates to grid indices and checks if the point is inside the map.
+      
+      Args:
+          world_coordinates (tuple or list): World coordinates (x, y) in meters.
+          map_obj (dict): Map object containing resolution, width, height, and origin information.
+          
+      Returns:
+          tuple: Grid indices.
+          bool: True if point is inside the map else False.
+      """
+      x, y = world_coordinates
+      resolution = map_obj.resolution
+      width = map_obj.width
+      height = map_obj.height
+      origin = map_obj.origin
 
-    def heuristic(self, a, b):
-        return hypot(b[0] - a[0], b[1] - a[1])
+      x_origin = origin.position.x
+      y_origin = origin.position.y
 
-    def calculate_path(self):
-        #use Astar algorithm
-        start = self.world_to_grid((self.start.pose.position.x, self.start.pose.position.y))
-        goal = self.world_to_grid((self.goal.pose.position.x, self.goal.pose.position.y))
+      q_x = origin.orientation.x
+      q_y = origin.orientation.y
+      q_z = origin.orientation.z
+      q_w = origin.orientation.w
+      quaternion = (
+      q_x,
+      q_y,
+      q_z,
+      q_w
+      )
 
-        frontier = []
-        heapq.heappush(frontier, (0, start))
-        came_from = {start: None}
-        cost_so_far = {start: 0}
+      roll, pitch, yaw = euler_from_quaternion(quaternion)
+      ## Quaternion to eulor conversion
+      # yaw (z-axis rotation)
+      # siny_cosp = +2.0 * (q_w * q_z + q_x * q_y)
+      # cosy_cosp = +1.0 - 2.0 * (q_y * q_y + q_z * q_z)  
+      # yaw = np.arctan2(siny_cosp, cosy_cosp)
+      theta_origin = yaw
 
-        while frontier:
-            current = heapq.heappop(frontier)[1]
+      # Calculate relative position from origin
+      dx = x - x_origin
+      dy = y - y_origin
 
-            if current == goal:
-                break
+      # Rotate relative position based on origin theta
+      x_rotated = dx * np.cos(-theta_origin) - dy * np.sin(-theta_origin)
+      y_rotated = dx * np.sin(-theta_origin) + dy * np.cos(-theta_origin)
 
-            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # 4-connected grid
-                next = (current[0] + dx, current[1] + dy)
-                if 0 <= next[0] < self.map_size[0] and 0 <= next[1] < self.map_size[1] and self.map[next[0], next[1]] == 0:
-                    new_cost = cost_so_far[current] + 1
-                    if next not in cost_so_far or new_cost < cost_so_far[next]:
-                        cost_so_far[next] = new_cost
-                        priority = new_cost + self.heuristic(next, goal)
-                        heapq.heappush(frontier, (priority, next))
-                        came_from[next] = current
+      # Convert to grid indices
+      i = int(y_rotated / resolution)
+      j = int(x_rotated / resolution)
 
-        path = self.reconstruct_path(came_from, start, goal)
-        self.publish_path(path)
-        return path  # Returning the path as a list of coordinates
+      # Check if point is inside the map
+      inside_map = 0 <= j < height and 0 <= i < width
 
-    def reconstruct_path(self, came_from, start, goal):
-        """Reconstruct the path from start to goal."""
-        path = []
-        current = goal
-        while current != start:
-            path.append(current)
-            current = came_from[current]
-        path.append(start)
-        path.reverse()
-        return path
+      return (j, i), inside_map
+    
 
-    def publish_path(self, path):
-        self.path = Path()
-        self.path.header.frame_id = 'map'
-        self.path.header.stamp = rospy.Time.now()
-        for p in path:
-            pose = PoseStamped()
-            pose.header = self.path.header
-            pose.pose.position.x = p[0] * self.resolution + self.origin.pose.position.x
-            pose.pose.position.y = p[1] * self.resolution + self.origin.pose.position.y
-            pose.pose.orientation.w = 1.0
-            self.path.poses.append(pose)
-        self.path_publisher.publish(self.path)
-
-    def calculate_path(self):
-        '''
-        Add Path Calculation Logic
-        use self.path storing path
-        use self.map for latest map
-        '''
-        return super().calculate_path()
-
-
-
-if __name__ == "__main__":
-    dummy_on = rospy.get_param('dummy', True)
-    if dummy_on:
-        gp = DummyGlobalPlanner()
-        gp.start_service()
-    else:
-        gp = GlobalPlanner()
-        gp.start_service()
+if __name__ == '__main__':
+    GlobalPlanner()
