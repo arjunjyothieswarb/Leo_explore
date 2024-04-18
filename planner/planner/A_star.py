@@ -1,11 +1,10 @@
 import heapq
+from math import hypot
 
 def heuristic(a, b):
-    # Using Manhattan Distance as the heuristic
-    return abs(b[0] - a[0]) + abs(b[1] - a[1])
+    return hypot(b[0] - a[0], b[1] - a[1])
 
 def a_star_search(grid, start, goal):
-    # Directions for moving in the grid (up, down, left, right)
     neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
     close_set = set()
     came_from = {}
@@ -30,7 +29,7 @@ def a_star_search(grid, start, goal):
             neighbor = current[0] + i, current[1] + j
             
             if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]):
-                # Skip if the cell is an obstacle or unknown
+                # Skip if the cell is an obstacle
                 if grid[neighbor[0]][neighbor[1]] == 100:
                     continue
             else:
