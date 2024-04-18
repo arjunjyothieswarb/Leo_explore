@@ -1,7 +1,7 @@
 <launch>
 
   <!-- SLAM NODE -->
-  <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch"/>
+  <!-- <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch"/> -->
 
 
   <!-- DECOMPRESS IMAGE TOPIC -->
@@ -13,9 +13,9 @@
   </node> -->
 
   <!-- APRIL TAG DETECTION NODE-->
-  <!-- <include file="$(find apriltag_ros)/launch/continuous_detection.launch">
+  <include file="$(find apriltag_ros)/launch/continuous_detection.launch">
     <arg name="camera_name" value="/raspicam_node" />
-  </include> -->
+  </include>
 
    <!-- <node pkg="tf" type="static_transform_publisher" name="tf_cam_base" args="-0.032 0 0.12 0 0 0 /base_link /raspicam 100"/> -->
    <node pkg="tf" type="static_transform_publisher" name="tf_raspicam_base" args="-0.032 0 0.12 -1.57 0 -1.57 /base_link /camera 100"/>

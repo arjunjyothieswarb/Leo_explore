@@ -11,7 +11,7 @@ class MPPI:
         static_map=None,
         map_metadata_obj=None,
         motion_model= Unicycle(),
-        v_min=0, v_max=0.2, w_min=-np.pi, w_max=np.pi,
+        v_min=0, v_max=0.2, w_min=-1.5, w_max=1.5,
         num_rollouts = 100,
         num_steps = 20,#50,
         lamda = 0.1,

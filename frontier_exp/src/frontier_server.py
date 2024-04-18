@@ -53,6 +53,11 @@ class Frontier_Exp():
             end_index = base_index + width
             map_data[i] = np.array(self.map.data[base_index:end_index])
         
+        map_data[0][:] = 100
+        map_data[:][0] = 100
+        map_data[width-1][:] = 100
+        map_data[:][height-1] = 100
+        
         map_data[map_data > 0] = (self.neighbourhood**2) + 5
 
         # Getting cadidates
@@ -101,7 +106,7 @@ class Frontier_Exp():
     def get_scores(self, labels, centroid):
 
         res = self.map.info.resolution
-        phi_1 = 300    # Score multiplier for dist
+        phi_1 = 1000    # Score multiplier for dist
         phi_2 = 0.7    # Score multiplier for mass    
         scores = np.empty((np.shape(centroid)[0]))
         score_accum = 0
@@ -114,8 +119,8 @@ class Frontier_Exp():
 
         # Getting the robot indices
         robot_index = np.empty((2))
-        robot_index[1] = np.int8((transform.transform.translation.x + self.map.info.origin.position.x)/res)
-        robot_index[0] = np.int8((transform.transform.translation.y + self.map.info.origin.position.y)/res)
+        robot_index[1] = np.int16((transform.transform.translation.x - self.map.info.origin.position.x)/res)
+        robot_index[0] = np.int16((transform.transform.translation.y - self.map.info.origin.position.y)/res)
 
         for i in range((np.shape(centroid)[0])):
             dist = np.linalg.norm(centroid[i] - robot_index)

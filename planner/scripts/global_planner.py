@@ -104,7 +104,8 @@ class GlobalPlanner():
         print(pose_index, goal_index)
         path = a_star_search(self.map_data, pose_index, goal_index)
 
-        print(path)
+        if path == False:
+            return(False, True)
 
         point = PoseStamped()
 
