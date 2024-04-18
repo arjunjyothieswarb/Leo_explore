@@ -200,3 +200,42 @@ goal = (4, 4)
 # Execute the search
 path = a_star_search(grid, start, goal)
 print("Path:", path)
+
+def thicken_walls(grid):
+    rows = len(grid)
+    if rows == 0:
+        return grid
+    cols = len(grid[0])
+    
+    # 创建一个复制的grid，以避免在迭代时修改原始grid
+    new_grid = [row[:] for row in grid]
+    
+    # 要修改的区域范围
+    range_to_modify = range(-2, 3)  # 从-2到2
+
+    # 查找并扩展墙壁
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == 100:
+                # 修改以当前单元格为中心的5x5区域
+                for i in range_to_modify:
+                    for j in range_to_modify:
+                        new_r, new_c = r + i, c + j
+                        if 0 <= new_r < rows and 0 <= new_c < cols:
+                            new_grid[new_r][new_c] = 100
+    
+    return new_grid
+
+# 示例grid
+grid = [
+    [0, 0, 0, 0, 0],
+    [0, 100, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 100, 0],
+    [0, 0, 0, 0, 0]
+]
+
+# 应用函数
+thickened_grid = thicken_walls(grid)
+for row in thickened_grid:
+    print(row)
