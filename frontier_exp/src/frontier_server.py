@@ -24,7 +24,7 @@ class Frontier_Exp():
         self.neighbourhood = 5
         self.n = np.int8((self.neighbourhood - 1)/2)
         self.ker = np.ones((self.neighbourhood, self.neighbourhood), dtype=jnp.int8)
-        self.candidate_match = 13
+        self.candidate_match = 8 #12
         self.cluster_number = 8
         
         self.tf_buffer = tf2_ros.Buffer()

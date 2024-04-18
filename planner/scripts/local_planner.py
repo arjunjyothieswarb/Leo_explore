@@ -31,8 +31,8 @@ class ControlBot():
         self.waypt_track = None
         # self.goal_pose_pub= rospy.Publisher("Waypt", PoseStamped, queue_size=10)
         self.waypt_goal =PoseStamped()
-        _ = rospy.wait_for_message('/goal_pose', PoseStamped, timeout=10)
-        rospy.Subscriber("/goal_pose", PoseStamped, self.goal_cb)  
+        _ = rospy.wait_for_message('/next_pose', PoseStamped, timeout=10)
+        rospy.Subscriber("/next_pose", PoseStamped, self.goal_cb)  
         
 
     def goal_cb(self, data):
@@ -100,8 +100,8 @@ class ControlBot():
       
       while not rospy.is_shutdown():
           try:
-            _ = rospy.wait_for_message('/goal_pose', PoseStamped, timeout=10)
-            rospy.Subscriber("/goal_pose", PoseStamped, self.goal_cb)  
+            _ = rospy.wait_for_message('/next_pose', PoseStamped, timeout=10)
+            rospy.Subscriber("/next_pose", PoseStamped, self.goal_cb)  
 
             rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
             # Get the latest transform from /map to /base_footprint
@@ -112,7 +112,7 @@ class ControlBot():
 
 
             dist = np.linalg.norm(self.state[:2] - self.goal)
-            while dist>0.15:
+            while dist>0.05:
               action= self.mppi.get_action(self.state, self.goal)
               cmd_vel = Twist()
               cmd_vel.linear.x =action[0]

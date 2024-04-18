@@ -13,7 +13,7 @@ class MPPI:
         motion_model= Unicycle(),
         v_min=0, v_max=0.2, w_min=-np.pi, w_max=np.pi,
         num_rollouts = 100,
-        num_steps = 50,
+        num_steps = 20,#50,
         lamda = 0.1,
         #env = gymnasium.Env                                        <<<<<<<<<<<<<<<<<<<<<<<<
     ):

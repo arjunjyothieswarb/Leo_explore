@@ -91,7 +91,7 @@ class GlobalPlanner():
         goal_x = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
         goal_index = (goal_x, goal_y)
 
-        if heuristic(pose_index, goal_index) < 2:
+        if heuristic(pose_index, goal_index) < 5:
             return (True, False)
         rospy.loginfo(f"Grid val: {self.map_data[goal_x][goal_y]}")
         start_index = (pose_x, pose_y)
@@ -117,7 +117,7 @@ class GlobalPlanner():
             # rospy.loginfo(f"Path: {temp_pose.pose.position.x,temp_pose.pose.position.y}")
             path_msg.poses.append(temp_pose)
             
-            if heuristic((x,y),pose_index) < 5:
+            if heuristic((x,y),pose_index) < 8:
                 point = temp_pose
 
         rospy.logwarn("Running!")
