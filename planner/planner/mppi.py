@@ -208,7 +208,7 @@ class MPPI:
         total_cost = cost/(self.num_steps)
         N_costs.append(total_cost)
       N_costs = np.array(N_costs)
-      rospy.loginfo("Hit count: " + str(hit_wall_count))
+      # rospy.loginfo("Hit count: " + str(hit_wall_count))
 
 
       return N_costs
