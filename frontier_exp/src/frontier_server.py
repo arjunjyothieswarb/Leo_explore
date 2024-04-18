@@ -24,7 +24,7 @@ class Frontier_Exp():
         self.neighbourhood = 5
         self.n = np.int8((self.neighbourhood - 1)/2)
         self.ker = np.ones((self.neighbourhood, self.neighbourhood), dtype=jnp.int8)
-        self.candidate_match = 8 #12
+        self.candidate_match = 12 #12
         self.cluster_number = 8
         
         self.tf_buffer = tf2_ros.Buffer()
@@ -58,7 +58,22 @@ class Frontier_Exp():
         # Getting cadidates
         map_data = jnp.array(map_data)
         map_data = jcp.signal.convolve(map_data, self.ker,'same')
-        candidates = jnp.argwhere(map_data == -self.candidate_match)
+        
+        # cand_1 = map_data < -self.candidate_match
+        # cand_2 = map_data > -((self.neighbourhood**2) - 5)
+        cand_1 = map_data < -3
+        cand_2 = map_data > -13
+
+        # cand_1 = map_data.at[map_data<-self.candidate_match].set(True)
+        # cand_2 = map_data.at[map_data>((self.neighbourhood**2) - self.candidate_match)].set(False)
+        cand_map = jnp.logical_and(cand_1, cand_2)
+        
+        # map_data = np.array(map_data)
+        # map_data[map_data < -self.candidate_match]# and map_data > -(self.neighbourhood**2 - self.candidate_match)] = 50
+        
+        candidates = jnp.argwhere(cand_map == True)
+        # rospy.loginfo(f"Poses:{candidates}")
+        print(candidates[:])
 
         # Clustering the candidates
         labels, centroid = self.get_cluster(candidates)
