@@ -9,8 +9,6 @@ import numpy as np
 import jax.numpy as jnp
 from jax.lax import reduce_window
 
-from scipy.ndimage import binary_dilation
-
 class GlobalPlanner():
 
     def __init__(self) -> None:
@@ -64,17 +62,6 @@ class GlobalPlanner():
 
             pass
         pass
-    def dilate_obstacles(self, map_array, dilation_size):
-        # Convert obstacles (100) to binary (1) and free spaces to binary (0)
-        binary_map = np.where(map_array == 100, 1, 0)
-        
-        # Perform binary dilation with specified size
-        dilated_map = binary_dilation(binary_map, structure=np.ones((dilation_size, dilation_size)))
-        
-        # Convert back to original valuespath = Path()
-        dilated_map = np.where(dilated_map, 100, map_array)
-        
-        return dilated_map
 
     def down_sample(self,kernel_size, stride):
         
