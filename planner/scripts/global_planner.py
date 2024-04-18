@@ -81,8 +81,8 @@ class GlobalPlanner():
         path_msg = Path()
         current_pose = self.tf_buffer.lookup_transform("map", "base_footprint", rospy.Duration(0))
         
-        pose_y = np.int16((current_pose.transform.translation.y - self.map.info.origin.position.y)/self.map.info.resolution)
-        pose_x = np.int16((current_pose.transform.translation.x - self.map.info.origin.position.x)/self.map.info.resolution)
+        pose_y = np.int16((current_pose.transform.translation.x - self.map.info.origin.position.y)/self.map.info.resolution)
+        pose_x = np.int16((current_pose.transform.translation.y - self.map.info.origin.position.x)/self.map.info.resolution)
 
         pose_index = (pose_x, pose_y)
         
