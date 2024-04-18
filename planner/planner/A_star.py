@@ -16,7 +16,7 @@ def is_near_wall_jax(grid, position, distance):
 
     return jnp.any(grid[min_r:max_r, min_c:max_c] == 100)
 
-def a_star_search(grid, start, goal, safety_distance=10):
+def a_star_search(grid, start, goal, safety_distance=0):
 
 
 
@@ -24,6 +24,7 @@ def a_star_search(grid, start, goal, safety_distance=10):
         return [] 
 
     neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
+    # neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)]
     close_set = set()
     came_from = {}
     gscore = {start: 0}

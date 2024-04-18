@@ -86,8 +86,8 @@ class GlobalPlanner():
 
         pose_index = (pose_x, pose_y)
         
-        goal_y = np.int16((goal_pose.pose.position.y - self.map.info.origin.position.y)/self.map.info.resolution)
-        goal_x = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
+        goal_x = np.int16((goal_pose.pose.position.y - self.map.info.origin.position.y)/self.map.info.resolution)
+        goal_y = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
         goal_index = (goal_x, goal_y)
 
         if heuristic(pose_index, goal_index) < 5:
@@ -101,16 +101,20 @@ class GlobalPlanner():
         # path = a_star_search(self.low_res_map, pose_index, goal_index)
         if self.map_data[goal_x][goal_y] == 100:
             return (False, True)
-        
+        print(pose_index, goal_index)
         path = a_star_search(self.map_data, pose_index, goal_index)
+
+        print(path)
+
         point = PoseStamped()
 
         for (x,y) in path:
+            # print(self.map_data[x,y])
             temp_pose = PoseStamped()
             temp_pose.header.stamp = rospy.Time.now()
             temp_pose.header.frame_id = "map"
-            temp_pose.pose.position.x = float(x*self.map.info.resolution + self.map.info.origin.position.x)
-            temp_pose.pose.position.y = float(y*self.map.info.resolution + self.map.info.origin.position.y)
+            temp_pose.pose.position.x = float(y*self.map.info.resolution + self.map.info.origin.position.x)
+            temp_pose.pose.position.y = float(x*self.map.info.resolution + self.map.info.origin.position.y)
             temp_pose.pose.position.z = 0.0
             temp_pose.pose.orientation.w = 1.0
             # rospy.loginfo(f"Path: {temp_pose.pose.position.x,temp_pose.pose.position.y}")

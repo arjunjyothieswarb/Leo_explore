@@ -13,7 +13,7 @@ class Map_inflator():
         rospy.init_node("Binary_inflator")
 
         # Getting the kernel size
-        self.kernel_size = rospy.get_param("~kernel_size",7)
+        self.kernel_size = rospy.get_param("~kernel_size",5)
         self.n = np.int8((self.kernel_size - 1)/2)
         
         # Initializing the publisher and subscriber
