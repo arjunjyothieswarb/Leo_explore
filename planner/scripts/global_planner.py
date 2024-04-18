@@ -315,3 +315,38 @@ safety_distance = 5
 # Execute the search
 path = a_star_search(grid, start, goal, safety_distance)
 print("Path:", path)
+
+
+import jax.numpy as jnp
+from jax import jit
+
+@jit
+def thicken_wall_jax(grid, radius=5):
+    rows, cols = grid.shape
+    thick_grid = jnp.array(grid)
+    # 使用JAX的数组操作来更新网格
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r, c] == 100:
+                # 确保索引在边界内
+                min_r = max(r - radius, 0)
+                max_r = min(r + radius + 1, rows)
+                min_c = max(c - radius, 0)
+                max_c = min(c + radius + 1, cols)
+                # 更新网格区域
+                thick_grid = thick_grid.at[min_r:max_r, min_c:max_c].set(100)
+    return thick_grid
+
+
+from jax import lax
+
+@jit
+def is_near_wall_jax(grid, position, distance):
+    rows, cols = grid.shape
+    start_row, start_col = position
+    min_r = max(start_row - distance, 0)
+    max_r = min(start_row + distance + 1, rows)
+    min_c = max(start_col - distance, 0)
+    max_c = min(start_col + distance + 1, cols)
+    # 检查指定区域内是否有墙壁
+    return jnp.any(grid[min_r:max_r, min_c:max_c] == 100)
