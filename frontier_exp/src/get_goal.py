@@ -9,6 +9,8 @@ from nav_msgs.msg import OccupancyGrid
 from sensor_msgs.msg import PointCloud
 
 import numpy as np
+import jax.numpy as jnp
+import jax.scipy as jcp
 from sklearn.cluster import KMeans
 import time
 
@@ -24,6 +26,7 @@ class Frontier_Exp():
         
         self.neighbourhood = 5
         self.n = np.int8((self.neighbourhood - 1)/2)
+        self.ker = np.ones((self.neighbourhood, self.neighbourhood), dtype=jnp.int8)
         self.candidate_match = 13
         self.cluster_number = 8
         
@@ -48,7 +51,7 @@ class Frontier_Exp():
         height = self.map.info.height     
 
         map_data = np.empty((height, width), dtype=np.int8)
-        candidates = []
+        # candidates = []
 
         # Converting 1D array into 2D
         for i in range(height):
@@ -58,12 +61,10 @@ class Frontier_Exp():
         
         map_data[map_data > 0] = (self.neighbourhood**2) + 5
 
-        # Getting cadidates
-        for i in range(self.n, height - self.n - 1):
-            for j in range(self.n, width - self.n - 1):
-                # if self.is_candidate(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]):
-                if np.sum(map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1]) == -self.candidate_match:
-                    candidates.append([i,j])
+        # Getting the candidates
+        map_data = jnp.array(map_data)
+        map_data = jcp.signal.convolve(map_data, self.ker,'same')
+        candidates = jnp.argwhere(map_data == -self.candidate_match)
 
         # Clustering the candidates
         labels, centroid = self.get_cluster(candidates)
@@ -134,29 +135,6 @@ class Frontier_Exp():
         goal.pose.position.y = float(goal_point[0]*self.map.info.resolution + self.map.info.origin.position.y)
         goal.pose.position.z = 0.0
         self.goal_pub.publish(goal)
-
-
-    # def is_candidate(self, ker):
-
-    #     # This function checks the eligibility of the neighbourhood to be a candidate
-    #     # If it encounters an occupied cell, it returns False
-    #     # If the number of unexplored points are less, it returns False
-
-    #     # Counter for number of unexplored cells
-    #     counter = 0
-
-    #     # Convolution... sort of
-    #     for i in range(self.neighbourhood):
-    #         for j in range(self.neighbourhood):
-    #             if ker[i,j] == 1:
-    #                 return False
-    #             elif ker[i,j] == 0:
-    #                 counter = counter + 1
-
-    #     if counter == self.candidate_match:
-    #         return True
-    #     else:
-    #         return False
 
 if __name__ == '__main__':
     Frontier_Exp()

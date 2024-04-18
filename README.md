@@ -11,6 +11,21 @@ Before launching the simulation, make sure to execute the following command in a
 source devel/setup.bash
 ```
 
+Install Packages: 
+```bash
+$ pip install scikit-learn
+$ pip install scipy
+$ sudo apt-get install ros-noetic-turtlebot3-gazebo
+$ sudo apt-get install ros-noetic-turtlebot3-slam
+$ sudo apt-get install ros-noetic-gmapping
+$ sudo apt-get install ros-noetic-turtlebot3-teleop
+```
+
+Set Environment Variable:
+```bash
+$ export TURTLEBOT3_MODEL=burger
+```
+
 Terminal 1:  
 ```bash
 $ roslaunch planner tb3_gazebo_slam.launch 
