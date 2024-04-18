@@ -103,7 +103,7 @@ class GlobalPlanner():
                     came_from[next] = current
 
         path = self.reconstruct_path(came_from, start, goal)
-        self.publish_path(path)
+        # self.publish_path(path)
         return path  # Returning the path as a list of coordinates
 
     def reconstruct_path(self, came_from, start, goal):
@@ -135,3 +135,68 @@ class GlobalPlanner():
 if __name__ == "__main__":
     gp = GlobalPlanner()
     gp.start_service()
+
+import heapq
+from math import sqrt
+
+def euclidean_distance(a, b):
+    return sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
+
+def a_star_search(grid, start, goal):
+    if grid[start[0]][start[1]] == 100 or grid[goal[0]][goal[1]] == 100:
+        return []  # 如果起点或终点是墙，则立即返回空路径
+
+    neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
+    close_set = set()
+    came_from = {}
+    gscore = {start: 0}
+    fscore = {start: euclidean_distance(start, goal)}
+    oheap = []
+
+    heapq.heappush(oheap, (fscore[start], start))
+
+    while oheap:
+        current = heapq.heappop(oheap)[1]
+
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            return path[::-1]
+
+        close_set.add(current)
+        for i, j in neighbors:
+            neighbor = (current[0] + i, current[1] + j)
+            if 0 <= neighbor[0] < len(grid) and 0 <= neighbor[1] < len(grid[0]):
+                if grid[neighbor[0]][neighbor[1]] == 100:
+                    continue  # Skip if the cell is a wall
+            else:
+                continue  # Skip out of bounds
+
+            tentative_g_score = gscore[current] + euclidean_distance(current, neighbor)
+            if neighbor in close_set and tentative_g_score >= gscore.get(neighbor, float('inf')):
+                continue
+
+            if tentative_g_score < gscore.get(neighbor, float('inf')) or neighbor not in [i[1] for i in oheap]:
+                came_from[neighbor] = current
+                gscore[neighbor] = tentative_g_score
+                fscore[neighbor] = tentative_g_score + euclidean_distance(neighbor, goal)
+                heapq.heappush(oheap, (fscore[neighbor], neighbor))
+
+    return False  # Return False if no path is found
+
+# Example grid and start/goal points
+grid = [
+    [0, 0, 100, 0, 0],
+    [0, -1, 100, -1, 0],
+    [0, -1, 0, -1, 0],
+    [0, 100, 100, 100, 0],
+    [0, 0, 0, 0, 0]
+]
+start = (0, 0)
+goal = (4, 4)
+
+# Execute the search
+path = a_star_search(grid, start, goal)
+print("Path:", path)
