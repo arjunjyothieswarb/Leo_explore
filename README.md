@@ -45,4 +45,11 @@ Terminal 4:
 ```bash
 $ rosrun planner local_planner.py 
 ```
- 
+
+In Terminal:
+```bash
+$ export TURTLEBOT3_MODEL=burger
+$ source devel/setup.bash
+$  roslaunch planner tb3_gazebo_planner.launch
+
+```
