@@ -13,7 +13,7 @@ class Map_inflator():
         rospy.init_node("Binary_inflator")
 
         # Getting the kernel size
-        self.kernel_size = rospy.get_param("~kernel_size",7)
+        self.kernel_size = rospy.get_param("~kernel_size",5)
         self.n = np.int8((self.kernel_size - 1)/2)
         
         # Initializing the publisher and subscriber
@@ -43,7 +43,7 @@ class Map_inflator():
         # Inflating
         for i in range(self.n, height - self.n - 1):
             for j in range(self.n, width - self.n - 1):
-                if map_data[i,j] == 100:
+                if map_data[i,j] > 0:
                     inflated_map_data[i-self.n:i+self.n+1, j-self.n:j+self.n+1] = 100
 
 

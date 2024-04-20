@@ -29,25 +29,17 @@ class ControlBot():
         self.mppi = MPPI()
         self.goal=None
         self.waypt_track = None
-        self.goal_pose_pub= rospy.Publisher("Waypt", PoseStamped, queue_size=10)
+        # self.goal_pose_pub= rospy.Publisher("Waypt", PoseStamped, queue_size=10)
         self.waypt_goal =PoseStamped()
-        self.get_path()
+        _ = rospy.wait_for_message('/next_pose', PoseStamped, timeout=10)
+        rospy.Subscriber("/next_pose", PoseStamped, self.goal_cb)  
+        
 
+    def goal_cb(self, data):
+        # rospy.loginfo("Goal Callback")
+        self.goal_pose = data.pose
+        self.goal = np.array([self.goal_pose.position.x, self.goal_pose.position.y])
 
-    # Service Request Function
-    def get_path(self, ):
-        # Request Server for goal pose
-        rospy.loginfo("Path getting service")
-        try:
-            goal_srv = rospy.ServiceProxy("global_path", global_path)
-            reached_goal =True
-            response = goal_srv(reached_goal)
-            self.global_path = response.path
-            rospy.loginfo(response)
-            self.waypt_track = WayptTracker(response.path)
-
-        except rospy.ServiceException as e:
-            rospy.loginfo("Service Exception: {}".format(e))        
 
 
     def transform_callback(self, transform):
@@ -57,7 +49,7 @@ class ControlBot():
         
         x = translation.x
         y = translation.y
-        rospy.loginfo(rotation)
+        # rospy.loginfo(rotation)
         quaternion = (
         rotation.x,
         rotation.y,
@@ -70,23 +62,7 @@ class ControlBot():
         roll, pitch, yaw = euler_from_quaternion(quaternion)
         self.yaw =yaw
         self.state = np.array([x,y, yaw])
-        goal, pose, done  = self.waypt_track.get_curr_waypt(self.state)
-        if done:
-          # Publishing zero vel
-          cmd_vel= Twist()
-          self.pub.publish(cmd_vel)
-          self.get_path()
-           
 
-        action= self.mppi.get_action(self.state, goal)
-        cmd_vel = Twist()
-        cmd_vel.linear.x =action[0]
-        cmd_vel.angular.z =action[1]
-        self.pub.publish(cmd_vel)
-        self.goal_pose_pub.publish(pose)
-
-        rospy.loginfo(f"Action: {action}")  
-        # rospy.loginfo(f"{x}, {y}, {yaw}")
 
     # Function to perform dilation
     def dilate_obstacles(self, map_array, dilation_size):
@@ -110,68 +86,56 @@ class ControlBot():
       # Convert 1D grid data to 2D numpy array
       grid_array = np.array(grid_data).reshape((height, width))
 
-      rospy.loginfo("grid_data shape"+ str(len(grid_data)))
+      # rospy.loginfo("grid_data shape"+ str(len(grid_data)))
       # dialation of map
       dilation_size = 4  
       dialated_map = self.dilate_obstacles(grid_array, dilation_size)
 
       self.mppi.map = dialated_map
       self.mppi.map_metadata_obj = data.info
-      image = ((grid_array + 1) * 127.5).astype(np.uint8)
-
-      unique_elements, counts = np.unique(data.data, return_counts=True)
-
-
-
 
 
     def run_control(self):
-      # rate = rospy.Rate()
+      rate = rospy.Rate(10)
       
       while not rospy.is_shutdown():
           try:
+            _ = rospy.wait_for_message('/next_pose', PoseStamped, timeout=10)
+            rospy.Subscriber("/next_pose", PoseStamped, self.goal_cb)  
+
             rospy.Subscriber("/map", OccupancyGrid, self.map_cb)
             # Get the latest transform from /map to /base_footprint
             transform = self.tf_buffer.lookup_transform('map', 'base_footprint', rospy.Time(0), rospy.Duration(1.0))
             
             # Callback to handle the transform
             self.transform_callback(transform)
-            
-            # rate.sleep()
+
+
+            dist = np.linalg.norm(self.state[:2] - self.goal)
+            while dist>0.05:
+              action= self.mppi.get_action(self.state, self.goal)
+              cmd_vel = Twist()
+              cmd_vel.linear.x =action[0]
+              cmd_vel.angular.z =action[1]
+              self.pub.publish(cmd_vel)
+              rospy.loginfo(f"Start: {self.state}") 
+              rospy.loginfo(f"End:{self.goal}")  
+              rospy.loginfo(f"Action: {action}") 
+              rospy.loginfo(f"Distance: {dist}")  
+              dist = np.linalg.norm(self.state[:2] - self.goal)
+              transform = self.tf_buffer.lookup_transform('map', 'base_footprint', rospy.Time(0), rospy.Duration(1.0))
+              
+              # Callback to handle the transform
+              self.transform_callback(transform)  
+
+              rate.sleep()
+            cmd_vel = Twist()
+            self.pub.publish(cmd_vel)
           
           except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             rospy.logwarn("Transform lookup failed: {}".format(e))
 
 
-class WayptTracker():
-    def __init__(self, path:Path):
-      self.path = path.poses
-      self.num_poses = len(path.poses)
-      self.i=0
-
-
-    def get_curr_waypt(self, initial_state):
-      # Update the waypoint
-      pose = self.path[self.i]
-      x = pose.pose.position.x
-      y = pose.pose.position.y
-      state = np.array([x,y])
-      distance = np.linalg.norm(initial_state[:2] - state)
-      threshold_distance=0.02
-
-      if distance < threshold_distance:
-          # Update the waypoint to a new position
-          self.i+=1
-      if self.i>=len(self.path):
-        return np.array([x,y]), pose,True
-      pose = self.path[self.i]
-      x = pose.pose.position.x
-      y = pose.pose.position.y
-
-
-
-  
-      return np.array([x,y]),pose, False
 
 
 
@@ -179,7 +143,7 @@ if __name__ == '__main__':
     try:
       # publising local path 
       #rospy.init_node('path_publisher_node', anonymous=True)
-      path_pub = rospy.Publisher('/path_topic', Path, queue_size=10)
+      # path_pub = rospy.Publisher('/path_topic', Path, queue_size=10)
       cb = ControlBot()
       cb.run_control()
     except rospy.ROSInterruptException:

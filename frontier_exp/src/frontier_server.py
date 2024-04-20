@@ -24,7 +24,7 @@ class Frontier_Exp():
         self.neighbourhood = 5
         self.n = np.int8((self.neighbourhood - 1)/2)
         self.ker = np.ones((self.neighbourhood, self.neighbourhood), dtype=jnp.int8)
-        self.candidate_match = 13
+        self.candidate_match = 12 #12
         self.cluster_number = 8
         
         self.tf_buffer = tf2_ros.Buffer()
@@ -53,12 +53,32 @@ class Frontier_Exp():
             end_index = base_index + width
             map_data[i] = np.array(self.map.data[base_index:end_index])
         
+        map_data[0][:] = 100
+        map_data[:][0] = 100
+        map_data[width-1][:] = 100
+        map_data[:][height-1] = 100
+        
         map_data[map_data > 0] = (self.neighbourhood**2) + 5
 
         # Getting cadidates
         map_data = jnp.array(map_data)
         map_data = jcp.signal.convolve(map_data, self.ker,'same')
-        candidates = jnp.argwhere(map_data == -self.candidate_match)
+        
+        # cand_1 = map_data < -self.candidate_match
+        # cand_2 = map_data > -((self.neighbourhood**2) - 5)
+        cand_1 = map_data < -3
+        cand_2 = map_data > -13
+
+        # cand_1 = map_data.at[map_data<-self.candidate_match].set(True)
+        # cand_2 = map_data.at[map_data>((self.neighbourhood**2) - self.candidate_match)].set(False)
+        cand_map = jnp.logical_and(cand_1, cand_2)
+        
+        # map_data = np.array(map_data)
+        # map_data[map_data < -self.candidate_match]# and map_data > -(self.neighbourhood**2 - self.candidate_match)] = 50
+        
+        candidates = jnp.argwhere(cand_map == True)
+        # rospy.loginfo(f"Poses:{candidates}")
+        print(candidates[:])
 
         # Clustering the candidates
         labels, centroid = self.get_cluster(candidates)
@@ -86,7 +106,7 @@ class Frontier_Exp():
     def get_scores(self, labels, centroid):
 
         res = self.map.info.resolution
-        phi_1 = 300    # Score multiplier for dist
+        phi_1 = 1000    # Score multiplier for dist
         phi_2 = 0.7    # Score multiplier for mass    
         scores = np.empty((np.shape(centroid)[0]))
         score_accum = 0
@@ -99,8 +119,8 @@ class Frontier_Exp():
 
         # Getting the robot indices
         robot_index = np.empty((2))
-        robot_index[1] = np.int8((transform.transform.translation.x + self.map.info.origin.position.x)/res)
-        robot_index[0] = np.int8((transform.transform.translation.y + self.map.info.origin.position.y)/res)
+        robot_index[1] = np.int16((transform.transform.translation.x - self.map.info.origin.position.x)/res)
+        robot_index[0] = np.int16((transform.transform.translation.y - self.map.info.origin.position.y)/res)
 
         for i in range((np.shape(centroid)[0])):
             dist = np.linalg.norm(centroid[i] - robot_index)

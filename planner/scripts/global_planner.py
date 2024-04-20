@@ -39,6 +39,7 @@ class GlobalPlanner():
 
             rospy.wait_for_service("frontier_goal")
             
+            
             # self.low_res_map = self.down_sample(kernel_size, stride)
             
             try:
@@ -62,8 +63,6 @@ class GlobalPlanner():
             pass
         pass
 
-
-
     def down_sample(self,kernel_size, stride):
         
         map_data = np.array(self.map_data[:,:])
@@ -82,16 +81,16 @@ class GlobalPlanner():
         path_msg = Path()
         current_pose = self.tf_buffer.lookup_transform("map", "base_footprint", rospy.Duration(0))
         
-        pose_y = np.int16((current_pose.transform.translation.y - self.map.info.origin.position.y)/self.map.info.resolution)
-        pose_x = np.int16((current_pose.transform.translation.x - self.map.info.origin.position.x)/self.map.info.resolution)
+        pose_y = np.int16((current_pose.transform.translation.x - self.map.info.origin.position.y)/self.map.info.resolution)
+        pose_x = np.int16((current_pose.transform.translation.y - self.map.info.origin.position.x)/self.map.info.resolution)
 
         pose_index = (pose_x, pose_y)
         
-        goal_y = np.int16((goal_pose.pose.position.y - self.map.info.origin.position.y)/self.map.info.resolution)
-        goal_x = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
+        goal_x = np.int16((goal_pose.pose.position.y - self.map.info.origin.position.y)/self.map.info.resolution)
+        goal_y = np.int16((goal_pose.pose.position.x - self.map.info.origin.position.x)/self.map.info.resolution)
         goal_index = (goal_x, goal_y)
 
-        if heuristic(pose_index, goal_index) < 2:
+        if heuristic(pose_index, goal_index) < 5:
             return (True, False)
         rospy.loginfo(f"Grid val: {self.map_data[goal_x][goal_y]}")
         start_index = (pose_x, pose_y)
@@ -102,22 +101,27 @@ class GlobalPlanner():
         # path = a_star_search(self.low_res_map, pose_index, goal_index)
         if self.map_data[goal_x][goal_y] == 100:
             return (False, True)
-        
+        print(pose_index, goal_index)
         path = a_star_search(self.map_data, pose_index, goal_index)
+
+        if path == False:
+            return(False, True)
+
         point = PoseStamped()
 
         for (x,y) in path:
+            # print(self.map_data[x,y])
             temp_pose = PoseStamped()
             temp_pose.header.stamp = rospy.Time.now()
             temp_pose.header.frame_id = "map"
-            temp_pose.pose.position.x = float(x*self.map.info.resolution + self.map.info.origin.position.x)
-            temp_pose.pose.position.y = float(y*self.map.info.resolution + self.map.info.origin.position.y)
+            temp_pose.pose.position.x = float(y*self.map.info.resolution + self.map.info.origin.position.x)
+            temp_pose.pose.position.y = float(x*self.map.info.resolution + self.map.info.origin.position.y)
             temp_pose.pose.position.z = 0.0
             temp_pose.pose.orientation.w = 1.0
             # rospy.loginfo(f"Path: {temp_pose.pose.position.x,temp_pose.pose.position.y}")
             path_msg.poses.append(temp_pose)
             
-            if heuristic((x,y),pose_index) < 5:
+            if heuristic((x,y),pose_index) < 8:
                 point = temp_pose
 
         rospy.logwarn("Running!")
@@ -136,6 +140,7 @@ class GlobalPlanner():
         # Getting and storing the latest map
         self.map = data
         self.map_data = self.OneD_to_twoD(self.map.info.height, self.map.info.width)
+
         self.GOT_MAP = True
 
 

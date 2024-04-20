@@ -1,7 +1,7 @@
 <launch>
 
   <!-- SLAM NODE -->
-  <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch"/>
+  <!-- <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch"/> -->
 
 
   <!-- DECOMPRESS IMAGE TOPIC -->

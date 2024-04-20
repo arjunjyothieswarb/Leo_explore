@@ -11,9 +11,9 @@ class MPPI:
         static_map=None,
         map_metadata_obj=None,
         motion_model= Unicycle(),
-        v_min=0, v_max=0.2, w_min=-np.pi, w_max=np.pi,
+        v_min=0, v_max=0.2, w_min=-1.5, w_max=1.5,
         num_rollouts = 100,
-        num_steps = 50,
+        num_steps = 20,#50,
         lamda = 0.1,
         #env = gymnasium.Env                                        <<<<<<<<<<<<<<<<<<<<<<<<
     ):
@@ -208,7 +208,7 @@ class MPPI:
         total_cost = cost/(self.num_steps)
         N_costs.append(total_cost)
       N_costs = np.array(N_costs)
-      rospy.loginfo("Hit count: " + str(hit_wall_count))
+      # rospy.loginfo("Hit count: " + str(hit_wall_count))
 
 
       return N_costs
