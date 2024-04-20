@@ -6,6 +6,9 @@
   <arg name="configuration_basename" default="turtlebot3_lds_2d.lua"/>
   <arg name="open_rviz" default="true"/>
 
+  <!-- Launch Gazebo world -->
+  <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_world.launch"/>
+
 
   <!-- TurtleBot3 -->
   <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
