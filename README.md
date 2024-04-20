@@ -1,12 +1,19 @@
-# MR_FinalProject
+# Leo Explore: The Reconnaissance Bot 
 
-Welcome to the Reconnaissance Bot GitHub repository! Our project showcases an advanced autonomous navigation system designed for exploring unknown environments. Leveraging frontier exploration, adaptive path planning algorithms, and integration with the TurtleBot3 platform.
+Welcome to Leo Explore: The Reconnaissance Bot  GitHub repository! Our project showcases an advanced autonomous navigation system designed for exploring unknown environments. Leveraging frontier exploration, adaptive path planning algorithms, and integration with the TurtleBot3 platform.
 
 The planner can be run on simulation on Gazebo as well as the Turtlebot3 Burger platform.
 
 ## Instructions for setting up the environment:
 
 Before launching the simulation, make sure to execute the following command in all terminals to set up the environment:
+
+```bash
+$ mkdir catkin_ws && cd catkin_ws
+$ git clone https://github.com/arjunjyothieswarb/Leo_explore.git
+$ mv Leo_explore src
+$ catkin_make
+```
 
 ```bash
 $ source devel/setup.bash
@@ -16,7 +23,7 @@ Set Environment Variable:
 ```bash
 $ export TURTLEBOT3_MODEL=burger
 ```
-The above commands can be appended to the ~/.bashrc file to avoid redundant steps.
+The source & export commands can be appended to the ~/.bashrc file to avoid redundant steps.
 
 Install Packages: 
 ```bash
@@ -29,6 +36,7 @@ $ sudo apt-get install ros-noetic-turtlebot3-teleop
 ```
 
 Follow Simulation launch steps for Gazebo Simulation.
+
 Follow Physical launch steps for testing it on the physical Turtlbot3 Burger platform.
 
 
