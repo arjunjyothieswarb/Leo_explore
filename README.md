@@ -1,15 +1,22 @@
 # MR_FinalProject
-Repo for final project of mobile robotics
 
-# Simulation Launch
+Welcome to the Reconnaissance Bot GitHub repository! Our project showcases an advanced autonomous navigation system designed for exploring unknown environments. Leveraging frontier exploration, adaptive path planning algorithms, and integration with the TurtleBot3 platform.
+
+The planner can be run on simulation on Gazebo as well as the Turtlebot3 Burger platform.
 
 ## Instructions for setting up the environment:
 
 Before launching the simulation, make sure to execute the following command in all terminals to set up the environment:
 
 ```bash
-source devel/setup.bash
+$ source devel/setup.bash
 ```
+
+Set Environment Variable:
+```bash
+$ export TURTLEBOT3_MODEL=burger
+```
+The above commands can be appended to the ~/.bashrc file to avoid redundant steps.
 
 Install Packages: 
 ```bash
@@ -21,35 +28,39 @@ $ sudo apt-get install ros-noetic-gmapping
 $ sudo apt-get install ros-noetic-turtlebot3-teleop
 ```
 
-Set Environment Variable:
-```bash
-$ export TURTLEBOT3_MODEL=burger
-```
+Follow Simulation launch steps for Gazebo Simulation.
+Follow Physical launch steps for testing it on the physical Turtlbot3 Burger platform.
 
-Terminal 1:  
-```bash
-$ roslaunch planner tb3_gazebo_slam.launch 
-```
 
-Terminal 2:  
-```bash
-$ rosrun planner dummy_frontier_server.py 
-```
- 
-Terminal 3:  
-```bash
-$ rosrun planner global_planner.py 
-```
- 
-Terminal 4:  
-```bash
-$ rosrun planner local_planner.py 
-```
+
+## Simulation Launch
 
 In Terminal:
 ```bash
 $ export TURTLEBOT3_MODEL=burger
 $ source devel/setup.bash
-$  roslaunch planner tb3_gazebo_planner.launch
+$ roslaunch planner tb3_gazebo_planner.launch
 
+```
+
+## Physical Launch
+
+Create a ROS Master setup on your workstation with Turtlebot3 platform.
+
+In Workstation Terminal:
+```bash
+$ roscore
+```
+
+In Turtlebot3 Terminal:
+```bash
+$ roslaunch turtlebot3_bringup turtlebot3_robot.launch
+```
+
+
+In Workstation Terminal:
+```bash
+$ export TURTLEBOT3_MODEL=burger
+$ source devel/setup.bash
+$ roslaunch planner tb3_remote.launch
 ```
